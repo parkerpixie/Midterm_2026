@@ -4,6 +4,7 @@
    The app never claims a result unless one of the players enters it. */
 const RACES = window.MIDTERM_RACES || [];
 const CANDIDATES = window.MIDTERM_CANDIDATES || {};
+const INCUMBENTS = window.MIDTERM_INCUMBENTS || {};
 const RACE_IDS = new Set(RACES.map(function (r) { return r.id; }));
 const PREVIEW_KEY = "ballot_board_2026_preview_v1";
 const ACTIVE_ROOM_KEY = "ballot_board_2026_active_room";
@@ -105,11 +106,48 @@ function render() {
     notice.className = "notice";
     notice.textContent = "";
   }
+  renderGuide();
   renderChambers();
   renderPlayers();
   renderLeaderboard();
   renderProgress();
   renderRaces();
+}
+
+function renderGuide() {
+  const text=el("communityGuideIntro");
+  if (!text) return;
+  if (state.demo) {
+    text.textContent="You can explore the game now. To let Facebook friends create their own profiles and appear on a shared leaderboard, connect Supabase first. Preview picks only stay on your device.";
+  } else if (state.pendingInvite) {
+    text.textContent="You're invited! Open Join / Profile, sign in with email or as a guest, enter your nickname, and join the challenge.";
+  } else if (!state.session || !state.room) {
+    text.textContent="Tap Join / Profile to sign in (or play as a guest), create a display name, and join a shared challenge using its invitation link.";
+  } else if (state.room.mode==="community") {
+    text.textContent="You're in a Community Challenge! Share the invitation link from Join / Profile. Every friend creates their own nickname and can see the leaderboard below.";
+  } else {
+    text.textContent="You're in a private two-player game. Want a Facebook leaderboard as well? Open Join / Profile to create another board as a Community Challenge.";
+  }
+}
+function openLeaderboard() {
+  const section=el("leaderboardSection");
+  if (!section.hidden) {
+    section.scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
+  openAccount();
+  notify("Create or join a Community Challenge to see the shared leaderboard.");
+}
+function incumbentMarkup(race) {
+  const inc=INCUMBENTS[race.id];
+  if (!inc) return '<div class="incumbent-row">🏛️ <span><strong>Incumbent:</strong> Not yet verified</span></div>';
+  let who;
+  if (inc.status==="vacant") who="Seat currently vacant";
+  else if (inc.name) who=inc.name+(inc.party?" ("+inc.party+")":"");
+  else who="Not listed for this district";
+  const note=inc.note?"<small>"+escapeHtml(inc.note)+"</small>":"";
+  return '<div class="incumbent-row"><span class="incumbent-icon" aria-hidden="true">🏛️</span>'+
+    '<span><span class="incumbent-label">INCUMBENT</span><strong>'+escapeHtml(who)+'</strong>'+note+'</span></div>';
 }
 function renderChambers() {
   [["house",435],["senate",100]].forEach(function (item) {
@@ -264,7 +302,7 @@ function raceCard(race) {
     }).join("")+'</select>';
   return '<article class="race-card '+(result?'called':'')+'">'+
     '<div class="race-card-top"><span class="race-type">'+(race.chamber==='senate'?'SENATE':'HOUSE')+' • '+race.state+'</span>'+badge+'</div>'+
-    '<h4>'+escapeHtml(race.title)+'</h4><p class="race-subtitle">'+escapeHtml(race.rating)+' • '+escapeHtml(race.subtitle)+'</p>'+
+    '<h4>'+escapeHtml(race.title)+'</h4><p class="race-subtitle">'+escapeHtml(race.rating)+' • '+escapeHtml(race.subtitle)+'</p>'+incumbentMarkup(race)+
     '<div class="mini-label">WHO DO YOU THINK WILL WIN?</div>'+selection+
     '<div class="pick-summary">'+(state.room?.mode==="community"?'Your pick: '+escapeHtml(displayChoice(race.id,my)):personSummaries)+'</div>'+
     '<div class="result-strip"><div class="result-head"><span class="result-text '+(result?'winner':'')+'">'+
@@ -636,6 +674,9 @@ async function initializeCloud() {
 
 function bindEvents() {
   el("accountButton").addEventListener("click",openAccount);
+  el("communityStartButton").addEventListener("click",openAccount);
+  el("leaderboardButton").addEventListener("click",openLeaderboard);
+  el("communityLeaderboardButton").addEventListener("click",openLeaderboard);
   el("shareButton").addEventListener("click",function () {
     if (state.demo || !state.room) openAccount(); else copyInvite();
   });
