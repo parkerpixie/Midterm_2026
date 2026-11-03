@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152047">
+  <meta name="description" content="The Ballot Board: a shared 2026 election-night prediction game for two.">
+  <title>The Ballot Board '26 | Parker vs. Blake</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="races.js" defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="brand"><div class="brand-icon" aria-hidden="true">★</div><div><span class="eyebrow">A VERY CIVIC HOUSEHOLD COMPETITION</span><h1>THE BALLOT <em>BOARD</em><sup>'26</sup></h1></div></div>
+      <div class="header-actions"><span id="connectionStatus" class="status-pill">◌ Preview mode</span><button class="small-btn" id="accountButton" type="button">👥 Players</button></div>
+    </header>
+    <div class="marquee" aria-label="Election Day, November 3, 2026"><div class="marquee-track">★ ELECTION NIGHT 2026 ★ PARKER VERSUS BLAKE ★ 35 SENATE RACES ★ 435 HOUSE SEATS ★ MAY THE MOST PRESCIENT HUMAN WIN ★</div></div>
+    <main>
+      <section class="hero">
+        <div class="hero-copy"><span class="micro">NOVEMBER 3, 2026 • LIVE FROM THE LIVING ROOM</span><h2>Two predictions.<br><span>One big night.</span></h2><p>Your college spreadsheet got a glow-up. Make your picks, check the calls, and see who can read the electoral tea leaves.</p><div class="hero-actions"><button id="featuredButton" class="button primary" type="button">🎯 See featured races</button><button id="shareButton" class="button outline" type="button">🔗 Share our board</button></div></div>
+        <div class="hero-graphic" aria-hidden="true"><div class="orbit orbit-1"></div><div class="orbit orbit-2"></div><div class="ballot-ball"><div class="ballot-fold">★</div><div class="ballot-line"></div><div class="ballot-line shorter"></div><div class="ballot-tick">✓</div></div><span class="spark s1">✦</span><span class="spark s2">★</span><span class="spark s3">✳</span><div class="graphic-sticker">PICK<br>YOUR<br>WINNERS!</div></div>
+      </section>
+      <div id="notice" class="notice" role="status"></div>
+      <section class="section-heading"><div><span class="micro">THE BIG PICTURE</span><h3>Chamber control</h3></div><button id="totalsButton" class="text-button" type="button">✎ Update called-seat totals</button></section>
+      <p class="fine-print" id="totalsDisclaimer">Totals are manually entered, not a live results feed. They are separate from the featured-race prediction game.</p>
+      <div class="chamber-grid">
+        <article class="chamber-card"><div class="chamber-top"><span class="chamber-symbol">▦</span><div><span class="micro dark">UNITED STATES</span><h4>HOUSE</h4></div><span class="threshold">218 TO WIN</span></div><div class="seat-readout"><div><span class="party-label dem">DEMOCRATIC</span><strong class="dem-number" id="houseD">—</strong></div><div class="majority-track"><span class="majority-line"></span><div class="bar-fill dem-fill" id="houseDBar"></div><div class="bar-fill rep-fill" id="houseRBar"></div></div><div class="right"><span class="party-label rep">REPUBLICAN</span><strong class="rep-number" id="houseR">—</strong></div></div><p class="chamber-foot" id="houseStatus">Waiting for called-seat totals • 435 seats</p></article>
+        <article class="chamber-card"><div class="chamber-top"><span class="chamber-symbol">◉</span><div><span class="micro dark">UNITED STATES</span><h4>SENATE</h4></div><span class="threshold">100 SEATS</span></div><div class="seat-readout"><div><span class="party-label dem">D + CAUCUSING I</span><strong class="dem-number" id="senateD">—</strong></div><div class="majority-track"><span class="majority-line"></span><div class="bar-fill dem-fill" id="senateDBar"></div><div class="bar-fill rep-fill" id="senateRBar"></div></div><div class="right"><span class="party-label rep">REPUBLICAN</span><strong class="rep-number" id="senateR">—</strong></div></div><p class="chamber-foot" id="senateStatus">Waiting for called-seat totals • 50–50 ties go to the vice president</p></article>
+      </div>
+      <section class="section-heading"><div><span class="micro">BRAGGING RIGHTS DEPARTMENT</span><h3>Prediction showdown</h3></div><span class="section-decoration">✳</span></section>
+      <div class="player-grid" id="playerGrid"></div>
+      <section class="section-heading race-section"><div><span class="micro">THE RACE BOARD</span><h3>Watch the map change</h3></div><span id="raceCount" class="count-bubble">88 races</span></section>
+      <div class="race-controls"><div class="tabs" role="tablist" aria-label="Race filters"><button class="tab selected" data-view="featured" type="button">★ Featured</button><button class="tab" data-view="senate" type="button">Senate</button><button class="tab" data-view="house" type="button">House</button><button class="tab" data-view="all" type="button">All tracked</button></div><div class="filter-row"><label class="search-label"><span aria-hidden="true">⌕</span><input id="raceSearch" type="search" placeholder="Search state or district…" aria-label="Search races"></label><select id="raceFilter" aria-label="Filter by race status"><option value="all">Any status</option><option value="open">Not called</option><option value="called">Called</option><option value="unpicked">My unpicked races</option></select></div></div>
+      <div class="board-meta"><span><span class="dot blue-dot"></span> D pick / call</span><span><span class="dot red-dot"></span> R pick / call</span><span><span class="dot gold-dot"></span> Other / independent</span><span>Results are entered by you, not automatically verified</span></div>
+      <div id="raceGrid" class="race-grid"></div>
+      <footer><span>✦ THE BALLOT BOARD '26 ✦</span><p>A tiny election-night tradition, with an unreasonable amount of personality.</p><p>Race lists: <a href="https://ballotpedia.org/U.S._Senate_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia</a> and <a href="https://www.cookpolitical.com/ratings/house-race-ratings" target="_blank" rel="noopener">Cook Political Report</a>. Ratings are third-party classifications, not this app's predictions. Nothing here is an official results feed.</p></footer>
+    </main>
+  </div>
+  <dialog id="accountDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div id="accountContent"></div></dialog>
+  <dialog id="totalsDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div class="modal-body"><span class="micro">MANUAL RESULTS DESK</span><h3>Update chamber totals</h3><p>Enter totals only when you're comfortable with the source. House counts represent winners called across all districts. For the Senate, count independents who caucus with Democrats in the D + I column.</p><form id="totalsForm"><div class="total-input-heading">HOUSE <small>435 seats total</small></div><div class="input-pair"><label>D seats called<input name="houseD" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label><label>R seats called<input name="houseR" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label></div><div class="total-input-heading">SENATE <small>100 seats total, including seats not on the ballot</small></div><div class="input-pair"><label>D + caucusing I seats<input name="senateD" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label><label>R seats<input name="senateR" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label></div><button class="button primary full" type="submit">Save shared totals</button></form></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
