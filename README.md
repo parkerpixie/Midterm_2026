@@ -28,6 +28,20 @@ The homepage and party imagery now use Parker's supplied artwork. The HTML/CSS l
 
 See [assets/README.md](assets/README.md) for file names and details.
 
+## Google sign-in setup (recommended for recoverable community profiles)
+
+The app now has **Continue with Google** in **Join / Profile**. It uses Supabase OAuth and returns to the same Netlify page, preserving invitation codes. **The button will not work until Google OAuth is enabled and configured in Supabase.**
+
+1. In Supabase **Authentication → URL Configuration**, set Site URL to `https://votemidterms2026.netlify.app` and add `https://votemidterms2026.netlify.app/**` to allowed redirect URLs. This also addresses email confirmation links landing somewhere other than the app.
+2. In [Google Cloud Auth Platform](https://console.cloud.google.com/auth/overview), create or select a Google Cloud project. Under **Branding**, give it the app name **The Ballot Board 2026** and choose your support email. Under **Audience**, choose **External** for friends using their personal Google accounts. If the app is in Testing, add specific test users; use **Publish app** for broader access when ready. Use only basic profile and email scopes.
+3. Under **Clients**, create an **OAuth client ID**, choosing **Web application**. Under **Authorized JavaScript origins**, enter `https://votemidterms2026.netlify.app`.
+4. Under **Authorized redirect URIs**, enter the **Supabase callback** (not the Netlify URL!): `https://omgradhyrdvjwrcpadtb.supabase.co/auth/v1/callback`.
+5. Copy the new **Client ID** and **Client Secret** into [Supabase Authentication → Providers → Google](https://supabase.com/dashboard/project/omgradhyrdvjwrcpadtb/auth/providers). Enable the Google provider and save. **Do not commit your Client Secret to GitHub or paste it into the public website.**
+6. Open the [live app](https://votemidterms2026.netlify.app), click **Join / Profile → Continue with Google**, complete Google's sign-in, and confirm the browser returns to the election app. Choose a nickname and create/join a challenge.
+7. Test with a second Google account before sharing publicly on Facebook.
+
+For exact current setup, see [Supabase's Google OAuth guide](https://supabase.com/docs/guides/auth/social-sign-in/auth-google) and [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls).
+
 ## Final Supabase sign-in settings for this project
 
 The current project is **MietermElection2026**. The core database and public Supabase connection are installed. Two dashboard changes remain:
