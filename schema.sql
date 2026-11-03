@@ -1,6 +1,6 @@
 -- THE BALLOT BOARD 2026
 -- Run this script once in a dedicated Supabase project's SQL Editor.
--- All public tables have RLS. Only room members can read room data.
+-- All public tables have RLS. Only room members can read room data; community hosts control calls.
 -- Publishable browser key only. NEVER expose a service_role/secret key.
 begin;
 
@@ -8,6 +8,7 @@ create table if not exists public.midterm_rooms (
   id uuid primary key default gen_random_uuid(),
   code text not null unique check (code ~ '^[A-Z2-9]{10}$'),
   owner_id uuid not null references auth.users(id) on delete cascade,
+  mode text not null default 'duo' check (mode in ('duo','community')),
   created_at timestamptz not null default now()
 );
 
@@ -24,6 +25,7 @@ create table if not exists public.midterm_picks (
   user_id uuid not null,
   race_id text not null check (char_length(race_id) between 3 and 32),
   party text not null check (party in ('D','R','O')),
+  candidate_id text check (candidate_id is null or candidate_id like race_id || ':%'),
   updated_at timestamptz not null default now(),
   primary key(room_id,user_id,race_id),
   foreign key(room_id,user_id) references public.midterm_members(room_id,user_id) on delete cascade
@@ -33,6 +35,7 @@ create table if not exists public.midterm_results (
   room_id uuid not null references public.midterm_rooms(id) on delete cascade,
   race_id text not null check (char_length(race_id) between 3 and 32),
   party text not null check (party in ('D','R','O')),
+  candidate_id text check (candidate_id is null or candidate_id like race_id || ':%'),
   updated_by uuid not null references auth.users(id),
   updated_at timestamptz not null default now(),
   primary key(room_id,race_id)
@@ -49,6 +52,10 @@ create table if not exists public.midterm_totals (
   check(dem + rep <= case when chamber='house' then 435 else 100 end)
 );
 
+-- Upgrade prior versions safely if the original two-player schema was already run.
+alter table public.midterm_rooms add column if not exists mode text not null default 'duo';
+alter table public.midterm_picks add column if not exists candidate_id text;
+alter table public.midterm_results add column if not exists candidate_id text;
 create index if not exists midterm_members_user_id_idx on public.midterm_members(user_id);
 create schema if not exists private;
 revoke all on schema private from public, anon;
@@ -69,6 +76,23 @@ as $$
 $$;
 revoke all on function private.midterm_is_member(uuid) from public, anon;
 grant execute on function private.midterm_is_member(uuid) to authenticated;
+
+-- In public Community Challenges only the room owner may update calls and totals.
+-- In private duo mode both participants may enter shared results.
+create or replace function private.midterm_can_manage(p_room uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $
+  select exists (
+    select 1 from public.midterm_rooms r
+    where r.id=p_room and
+     (r.owner_id=(select auth.uid()) or
+      (r.mode='duo' and private.midterm_is_member(p_room)))
+  );
+$;
+revoke all on function private.midterm_can_manage(uuid) from public, anon;
+grant execute on function private.midterm_can_manage(uuid) to authenticated;
 
 alter table public.midterm_rooms enable row level security;
 alter table public.midterm_members enable row level security;
@@ -99,11 +123,14 @@ create policy midterm_picks_read on public.midterm_picks for select to authentic
 using (private.midterm_is_member(room_id));
 drop policy if exists midterm_picks_add on public.midterm_picks;
 create policy midterm_picks_add on public.midterm_picks for insert to authenticated
-with check (user_id=(select auth.uid()) and private.midterm_is_member(room_id));
+with check (user_id=(select auth.uid()) and private.midterm_is_member(room_id) and
+  not exists (select 1 from public.midterm_results r where r.room_id=midterm_picks.room_id and r.race_id=midterm_picks.race_id));
 drop policy if exists midterm_picks_edit on public.midterm_picks;
 create policy midterm_picks_edit on public.midterm_picks for update to authenticated
-using (user_id=(select auth.uid()) and private.midterm_is_member(room_id))
-with check (user_id=(select auth.uid()) and private.midterm_is_member(room_id));
+using (user_id=(select auth.uid()) and private.midterm_is_member(room_id) and
+  not exists (select 1 from public.midterm_results r where r.room_id=midterm_picks.room_id and r.race_id=midterm_picks.race_id))
+with check (user_id=(select auth.uid()) and private.midterm_is_member(room_id) and
+  not exists (select 1 from public.midterm_results r where r.room_id=midterm_picks.room_id and r.race_id=midterm_picks.race_id));
 drop policy if exists midterm_picks_delete on public.midterm_picks;
 create policy midterm_picks_delete on public.midterm_picks for delete to authenticated
 using (user_id=(select auth.uid()) and private.midterm_is_member(room_id));
@@ -113,27 +140,28 @@ create policy midterm_results_read on public.midterm_results for select to authe
 using (private.midterm_is_member(room_id));
 drop policy if exists midterm_results_add on public.midterm_results;
 create policy midterm_results_add on public.midterm_results for insert to authenticated
-with check (updated_by=(select auth.uid()) and private.midterm_is_member(room_id));
+with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_id));
 drop policy if exists midterm_results_edit on public.midterm_results;
 create policy midterm_results_edit on public.midterm_results for update to authenticated
-using (private.midterm_is_member(room_id))
-with check (updated_by=(select auth.uid()) and private.midterm_is_member(room_id));
+using (private.midterm_can_manage(room_id))
+with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_id));
 drop policy if exists midterm_results_delete on public.midterm_results;
 create policy midterm_results_delete on public.midterm_results for delete to authenticated
-using (private.midterm_is_member(room_id));
+using (private.midterm_can_manage(room_id));
 
 drop policy if exists midterm_totals_read on public.midterm_totals;
 create policy midterm_totals_read on public.midterm_totals for select to authenticated
 using (private.midterm_is_member(room_id));
 drop policy if exists midterm_totals_add on public.midterm_totals;
 create policy midterm_totals_add on public.midterm_totals for insert to authenticated
-with check (updated_by=(select auth.uid()) and private.midterm_is_member(room_id));
+with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_id));
 drop policy if exists midterm_totals_edit on public.midterm_totals;
 create policy midterm_totals_edit on public.midterm_totals for update to authenticated
-using (private.midterm_is_member(room_id))
-with check (updated_by=(select auth.uid()) and private.midterm_is_member(room_id));
+using (private.midterm_can_manage(room_id))
+with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_id));
 
--- Invite-only joining. The code lookup intentionally bypasses room RLS,
+-- Invite-only joining, max 2 in duo mode or max 500 in community mode.
+-- The code lookup intentionally bypasses room RLS,
 -- but requires a signed-in user, limits seats to two, and returns only room ID.
 create or replace function public.join_midterm_room(p_code text,p_name text)
 returns uuid
@@ -142,6 +170,7 @@ set search_path = ''
 as $$
 declare
   v_room uuid;
+  v_mode text;
   v_user uuid := auth.uid();
 begin
   if v_user is null then
@@ -150,18 +179,19 @@ begin
   if p_name is null or char_length(trim(p_name)) not between 1 and 30 then
     raise exception 'Display name must be 1 to 30 characters';
   end if;
-  select id into v_room
+  select id,mode into v_room,v_mode
     from public.midterm_rooms
     where code = upper(trim(p_code))
     for update;
   if v_room is null then
     raise exception 'Invalid invitation code';
   end if;
-  if (select count(*) from public.midterm_members where room_id=v_room) >= 2
+  if (select count(*) from public.midterm_members where room_id=v_room) >=
+    (case when v_mode='community' then 500 else 2 end)
     and not exists(
       select 1 from public.midterm_members where room_id=v_room and user_id=v_user
     ) then
-    raise exception 'This board already has two players';
+    raise exception 'This challenge has reached its participant limit';
   end if;
   insert into public.midterm_members (room_id,user_id,display_name)
     values (v_room,v_user,trim(p_name))
