@@ -221,10 +221,11 @@ function filteredRaces() {
 
 
 function candidateButton(raceId,candidate,selected) {
+  const locked=!!calledParty(raceId);
   const initials=candidate.name.split(/\s+/).filter(Boolean).slice(0,2).map(function (w) { return w[0]; }).join("").toUpperCase();
   const partyClass=candidate.party==="D"?"dem":candidate.party==="R"?"rep":"other";
   return '<button type="button" class="candidate-button '+partyClass+(selected===candidate.id?' selected':'')+
-    '" data-action="pick" data-race="'+escapeHtml(raceId)+'" data-candidate="'+escapeHtml(candidate.id)+'"'+
+    '" data-action="pick" data-race="'+escapeHtml(raceId)+'" data-candidate="'+escapeHtml(candidate.id)+'"'+(locked?' disabled':'')+
     ' aria-pressed="'+String(selected===candidate.id)+'" title="'+escapeHtml(candidate.name+' • '+candidate.partyName)+'">'+
     '<span class="candidate-avatar '+partyClass+'">'+escapeHtml(initials)+'</span>'+
     '<span class="candidate-details"><strong>'+escapeHtml(candidate.name)+'</strong>'+
@@ -282,6 +283,7 @@ function renderRaces() {
 
 async function savePick(raceId,candidateId) {
   if (!RACE_IDS.has(raceId)) return;
+  if (calledParty(raceId)) return notify("Predictions lock after a race has been called.");
   const candidate=candidateId?candidateFor(raceId,candidateId):null;
   if (candidateId && !candidate) return notify("Candidate not found in this race.");
   const userId=currentId();
