@@ -7,14 +7,14 @@
   <meta name="description" content="The Ballot Board: Parker and Blake’s private election-night prediction board, synced picks and a poll-close manager.">
   <title>The Ballot Board '26 | Parker vs Blake</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=duo-20261103">
+  <link rel="stylesheet" href="styles.css?v=duo-sync-top2">
   <script src="config.js" defer></script>
   <script src="races.js" defer></script>
   <script src="candidates.js" defer></script>
   <script src="incumbents.js" defer></script>
   <script src="governors.js" defer></script>
   <script src="poll-times.js" defer></script>
-  <script type="module" src="app.js?v=duo-20261103"></script>
+  <script type="module" src="app.js?v=duo-sync-top2"></script>
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -25,6 +25,13 @@
       <button class="small-btn leaderboard-nav" id="leaderboardButton" type="button">🏆 Scores</button>
       <button class="small-btn" id="accountButton" type="button">👥 Our phones</button></div>
     </header>
+
+  <nav id="mobileNav" class="mobile-nav" aria-label="Quick navigation">
+    <button type="button" data-action="mobile-picks"><span aria-hidden="true">✍️</span><small>My picks</small></button>
+    <button type="button" data-action="mobile-scores"><span aria-hidden="true">🏆</span><small>Scores</small></button>
+    <button type="button" data-action="mobile-manager"><span aria-hidden="true">📋</span><small>Manager</small></button>
+    <button type="button" data-action="mobile-sync"><span aria-hidden="true">📱</span><small>Sync</small></button>
+  </nav>
     <div class="marquee" aria-label="Election Day, November 3, 2026"><div class="marquee-track">★ ELECTION NIGHT 2026 ★ PARKER VS BLAKE ★ 35 SENATE RACES ★ 435 HOUSE SEATS ★ MAY THE MOST PRESCIENT HUMAN WIN ★</div></div>
     <main>
       <section class="hero illustrated-hero" aria-label="Midterms 2026 election night">
@@ -120,12 +127,6 @@
       <footer><span>✦ THE BALLOT BOARD '26 ✦</span><p>An unofficial election prediction game for friends and family, with House, Senate and governors' races and a shared leaderboard.</p><p>Race lists: <a href="https://ballotpedia.org/U.S._Senate_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia Senate</a>, <a href="https://ballotpedia.org/Gubernatorial_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia Governors</a> and <a href="https://www.cookpolitical.com/ratings/house-race-ratings" target="_blank" rel="noopener">Cook Political Report</a>. Race calls are entered by players and not independently verified.</p><p><a href="/privacy">Privacy Policy</a> · <a href="https://github.com/parkerpixie/Midterm_2026/issues/new" target="_blank" rel="noopener">Contact / Support</a></p></footer>
     </main>
   </div>
-  <nav id="mobileNav" class="mobile-nav" aria-label="Quick navigation">
-    <button type="button" data-action="mobile-picks"><span aria-hidden="true">✍️</span><small>My picks</small></button>
-    <button type="button" data-action="mobile-scores"><span aria-hidden="true">🏆</span><small>Scores</small></button>
-    <button type="button" data-action="mobile-manager"><span aria-hidden="true">📋</span><small>Manager</small></button>
-    <button type="button" data-action="mobile-sync"><span aria-hidden="true">📱</span><small>Sync</small></button>
-  </nav>
   <dialog id="accountDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div id="accountContent"></div></dialog>
   <dialog id="totalsDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div class="modal-body"><span class="micro">MANUAL RESULTS DESK</span><h3>Update chamber totals</h3><p>Enter totals only when you're comfortable with the source. House counts represent winners called across all districts. For the Senate, count independents who caucus with Democrats in the D + I column.</p><form id="totalsForm"><div class="total-input-heading">HOUSE <small>435 seats total</small></div><div class="input-pair"><label>D seats called<input name="houseD" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label><label>R seats called<input name="houseR" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label></div><div class="total-input-heading">SENATE <small>100 seats total, including seats not on the ballot</small></div><div class="input-pair"><label>D + caucusing I seats<input name="senateD" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label><label>R seats<input name="senateR" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label></div><button class="button primary full" type="submit">Save shared totals</button></form></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
