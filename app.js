@@ -553,6 +553,91 @@ function renderAccount() {
     '<p class="fine-print">Your connection is stored on this device. Please avoid signing out or clearing the website’s storage, especially during election night.</p>');
 }
 
+
+function localBackupPayload() {
+  // Read the exact original browser entry. Do not mutate, delete or migrate it automatically.
+  const saved=localStorage.getItem(PREVIEW_KEY);
+  return JSON.stringify({
+    app:"The Ballot Board 2026",
+    source:"Original phone-only backup",
+    created_at:new Date().toISOString(),
+    source_key:PREVIEW_KEY,
+    preview:saved ? JSON.parse(saved) : state.preview
+  },null,2);
+}
+function downloadLocalBackup() {
+  try {
+    const data=localBackupPayload();
+    const filename="ballot-board-phone-backup-"+new Date().toISOString().slice(0,10)+".json";
+    const blob=new Blob([data],{type:"application/json;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download=filename;
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},3000);
+    notify("Backup downloaded! Keep that file safe 💾");
+  }catch(error){fail(error);}
+}
+async function copyLocalBackup() {
+  try {
+    await navigator.clipboard.writeText(localBackupPayload());
+    notify("Original saved picks copied to clipboard 💾");
+  }catch(error){fail(error);}
+}
+async function importLocalPicks() {
+  if(state.demo||!state.room||!state.member)return openAccount();
+  const name=state.member.display_name;
+  const source=(state.preview.picks||[]).filter(function(p){
+    return typeof p.user_id==="string" && p.user_id.toLowerCase()===name.toLowerCase();
+  });
+  const already=new Set(state.picks.filter(function(p){
+    return p.user_id===currentId();
+  }).map(function(p){return p.race_id;}));
+  const skippedCalled=[];
+  const rows=[];
+  for(const p of source){
+    if(!RACE_IDS.has(p.race_id)||already.has(p.race_id))continue;
+    if(calledParty(p.race_id)){skippedCalled.push(p.race_id);continue;}
+    const choice=candidateFor(p.race_id,rowChoice(p));
+    if(!choice)continue;
+    already.add(p.race_id);
+    rows.push({room_id:state.room.id,user_id:currentId(),race_id:p.race_id,
+      party:choice.party,candidate_id:choice.id});
+  }
+  if(!rows.length){
+    return notify(source.length?"No missing, uncalled picks to import. Original phone save is safe.":"No saved picks for "+name+" found on this phone.");
+  }
+  try{
+    // Insert, never update or delete any shared prediction.
+    const {error}=await state.client.from("midterm_picks").insert(rows);
+    if(error)throw error;
+    await loadData();
+    renderAccount();
+    notify("Restored "+rows.length+" saved picks! "+(skippedCalled.length?skippedCalled.length+" already-called races skipped.":"Original backup untouched. 🎉"));
+  }catch(error){fail(error);}
+}
+async function importLocalCalls() {
+  if(state.demo||!state.room||!state.member)return openAccount();
+  if(state.members.length<2){
+    return notify("Connect both phones and import both sets of picks BEFORE transferring old winner calls.");
+  }
+  const missing=(state.preview.results||[]).filter(function(r){
+    return RACE_IDS.has(r.race_id) && !calledParty(r.race_id) &&
+      !!candidateFor(r.race_id,rowChoice(r));
+  }).map(function(r){
+    const c=candidateFor(r.race_id,rowChoice(r));
+    return {room_id:state.room.id,race_id:r.race_id,party:c.party,
+      candidate_id:c.id,updated_by:currentId(),updated_at:new Date().toISOString()};
+  });
+  if(!missing.length)return notify("No additional local calls to bring over.");
+  if(!confirm("Import "+missing.length+" previous winner calls? Once called, both players' picks on those races lock. Only continue after both phones imported their predictions."))return;
+  try{
+    const {error}=await state.client.from("midterm_results").insert(missing);
+    if(error)throw error;
+    await loadData();
+    renderAccount();notify("Imported "+missing.length+" old calls to both phones.");
+  }catch(error){fail(error);}
+}
 async function signInGuest() {
   if (!state.client) return notify("First connect your Supabase project to enable sharing.");
   try {
@@ -735,6 +820,13 @@ async function initializeCloud() {
   }
 }
 
+function switchView(view) {
+  state.view=view;
+  if(view==="manager")renderManager();
+  renderRaces();
+  const target=document.querySelector(".race-section");
+  if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+}
 function bindEvents() {
   el("accountButton").addEventListener("click",openAccount);
   el("communityStartButton").addEventListener("click",openAccount);
@@ -757,6 +849,9 @@ function bindEvents() {
   el("stateFilter").addEventListener("change",function (event) {
     state.stateCode=event.target.value;renderRaces();
   });
+  el("managerFilter").addEventListener("change",function(event){
+    state.managerFilter=event.target.value;renderManager();
+  });
   el("nextUnpickedButton").addEventListener("click",function () {
     state.view="all"; state.filter="unpicked"; state.stateCode="all";
     el("raceSearch").value="";state.search="";
@@ -770,8 +865,18 @@ function bindEvents() {
   document.addEventListener("click",function (event) {
     const target=event.target.closest("[data-action],[data-view]");
     if (!target) return;
-    if (target.dataset.view) {state.view=target.dataset.view;renderRaces();return;}
+    if (target.dataset.view) {switchView(target.dataset.view);return;}
     const action=target.dataset.action,raceId=target.dataset.race;
+    if(action==="mobile-picks"){switchView("featured");return;}
+    if(action==="mobile-scores"){openLeaderboard();return;}
+    if(action==="mobile-manager"){switchView("manager");return;}
+    if(action==="mobile-sync"){openAccount();return;}
+    if(action==="manager-call"){saveCall(raceId,target.dataset.candidate);return;}
+    if(action==="manager-clear"){saveCall(raceId,"");return;}
+    if(action==="backup-local"){downloadLocalBackup();return;}
+    if(action==="copy-backup"){copyLocalBackup();return;}
+    if(action==="import-local"){importLocalPicks();return;}
+    if(action==="import-calls"){importLocalCalls();return;}
     if (action==="pick") {
       const candidateId=target.dataset.candidate;
       if (myPick(raceId,currentId())===candidateId) savePick(raceId,"");
@@ -782,7 +887,6 @@ function bindEvents() {
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
     }
     if (action==="copy-code") copyInvite();
-    if (action==="google-login") signInGoogle();
     if (action==="guest-login") signInGuest();
     if (action==="new-room") {
       state.creatingNewRoom=true;state.pendingInvite="";renderAccount();
@@ -801,12 +905,11 @@ function bindEvents() {
     if (action==="signout") signOut();
   });
   document.addEventListener("submit",function (event) {
-    if (!["emailForm","createRoomForm","joinRoomForm"].includes(event.target.id)) return;
+    if (!["createRoomForm","joinRoomForm"].includes(event.target.id)) return;
     event.preventDefault();
     const form=event.target,submit=form.querySelector('[type="submit"]');
     if (submit) submit.disabled=true;
     let task;
-    if (form.id==="emailForm") task=sendEmail(form);
     if (form.id==="createRoomForm") task=createRoom(form);
     if (form.id==="joinRoomForm") task=joinRoom(form);
     Promise.resolve(task).catch(fail).finally(function () { if (submit) submit.disabled=false; });
