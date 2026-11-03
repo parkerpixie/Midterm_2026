@@ -6,12 +6,14 @@ const RACES = window.MIDTERM_RACES || [];
 const CANDIDATES = window.MIDTERM_CANDIDATES || {};
 const RACE_IDS = new Set(RACES.map(function (r) { return r.id; }));
 const PREVIEW_KEY = "ballot_board_2026_preview_v1";
+const ACTIVE_ROOM_KEY = "ballot_board_2026_active_room";
 const PARTY = { D:"D", R:"R", O:"Other" };
 const el = function (id) { return document.getElementById(id); };
 let cachedPreview;
 try { cachedPreview = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch (_) { cachedPreview = null; }
 const state = {
-  demo:true, client:null, session:null, room:null, member:null, members:[],
+  demo:true, client:null, session:null, room:null, roomList:[], member:null, members:[],
+  preferredRoomId:null, pendingInvite:"", creatingNewRoom:false,
   picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
   persona:"Parker", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
@@ -91,6 +93,9 @@ function render() {
   if (state.demo) {
     notice.className = "notice visible";
     notice.textContent = "🎨 PREVIEW MODE: Picks and results save on this browser only. They will NOT appear on Blake's phone until Supabase is connected.";
+  } else if (state.pendingInvite) {
+    notice.className = "notice visible";
+    notice.textContent = "✉️ You have a challenge invitation waiting. Open Players to join with your own profile.";
   } else if (!online) {
     notice.className = "notice visible";
     notice.textContent = state.session
@@ -401,8 +406,8 @@ function renderAccount() {
       '<div class="modal-note">Only your display name shows on the community leaderboard. No password to remember.</div>');
     return;
   }
-  if (!state.room) {
-    const urlRoom=new URLSearchParams(location.search).get("room")||"";
+  if (!state.room || state.creatingNewRoom || state.pendingInvite) {
+    const urlRoom=state.pendingInvite||new URLSearchParams(location.search).get("room")||"";
     accountContent('<span class="micro">WELCOME TO THE BOARD</span><h3>Start or join a challenge</h3>'+
       '<p>Make a private two-person game, or a Community Challenge you can share on Facebook.</p>'+
       '<form id="createRoomForm"><label>Your display name<input name="display_name" maxlength="30" placeholder="Parker" required></label>'+
@@ -413,6 +418,7 @@ function renderAccount() {
       '<form id="joinRoomForm"><label>Invitation code<input name="code" value="'+escapeHtml(urlRoom)+'" maxlength="10" placeholder="10-character code" required autocapitalize="characters"></label>'+
       '<label>Your display name<input name="display_name" maxlength="30" placeholder="Your leaderboard name" required></label>'+
       '<button type="submit" class="button primary full">Join challenge</button></form>'+
+      (state.room?'<button type="button" class="link-button" data-action="cancel-new-room">Back to my challenge</button>':'')+
       '<button type="button" class="link-button" data-action="signout">Sign out</button>');
     return;
   }
@@ -428,6 +434,13 @@ function renderAccount() {
     '<div class="mini-label" style="margin-top:18px">INVITE CODE</div><div class="invite-code">'+code+'</div>'+
     '<button type="button" data-action="copy-code" class="button primary full">Copy invitation link</button>'+
     '<div class="modal-note">Each person uses their own email address and picks their own display name. Your friends will share only this challenge, not your private boards.</div>'+
+    '<div class="room-switcher"><div class="mini-label">MY CHALLENGES</div>'+state.roomList.map(function (room) {
+      const chosen=room.id===state.room.id;
+      return '<button type="button" class="room-switch'+(chosen?' current':'')+
+        '" data-action="switch-room" data-room="'+escapeHtml(room.id)+'">'+
+        (room.mode==="community"?'🌎 Community':'👥 Private')+' · '+escapeHtml(room.code)+(chosen?' ✓':'')+'</button>';
+    }).join("")+'</div>'+
+    '<button type="button" class="link-button" data-action="new-room">＋ Create or join another challenge</button>'+
     '<button type="button" class="link-button" data-action="signout">Sign out</button>');
 }
 
@@ -454,9 +467,12 @@ async function createRoom(form) {
   const created = await state.client.from("midterm_members")
     .insert({room_id:room.id,user_id:state.session.user.id,display_name:name});
   if (created.error) throw created.error;
+  state.preferredRoomId=room.id;
+  state.creatingNewRoom=false;
+  state.pendingInvite="";
   await bootUser();
   el("accountDialog").close();
-  notify("Your shared board is ready! Share its code ✨");
+  notify("Your new challenge is ready! Share its code ✨");
 }
 async function joinRoom(form) {
   if (!state.session) throw new Error("Sign in before joining.");
@@ -465,6 +481,12 @@ async function joinRoom(form) {
   if (!name || name.length>30) throw new Error("Please use a name between 1 and 30 characters.");
   const {error} = await state.client.rpc("join_midterm_room",{p_code:code,p_name:name});
   if (error) throw error;
+  state.preferredRoomId=null;
+  state.pendingInvite="";
+  state.creatingNewRoom=false;
+  // The invite query parameter and freshly joined membership select this board.
+  const joined=await state.client.from("midterm_rooms").select("id").eq("code",code).maybeSingle();
+  if (joined.data) state.preferredRoomId=joined.data.id;
   await bootUser();
   el("accountDialog").close();
   notify("You're in! Your picks now sync 🎉");
@@ -479,26 +501,50 @@ async function copyInvite() {
 async function signOut() {
   try {
     await state.client.auth.signOut();
-    state.session=null; state.room=null; state.member=null; state.members=[];
+    state.session=null; state.room=null; state.roomList=[]; state.member=null; state.members=[];
+    state.preferredRoomId=null; state.pendingInvite=''; state.creatingNewRoom=false;
     state.picks=[];state.results=[];state.totals=[];state.leaderboard=[];
     if (state.channel) { await state.client.removeChannel(state.channel);state.channel=null; }
     render();renderAccount();notify("Signed out");
   } catch (error) { fail(error); }
 }
+
 async function bootUser() {
-  if (!state.session) { state.room=null;state.member=null;state.members=[]; render();return; }
-  const uid = state.session.user.id;
-  const {data:member,error} = await state.client.from("midterm_members")
-    .select("room_id,user_id,display_name").eq("user_id",uid).limit(1).maybeSingle();
+  if (!state.session) {
+    state.room=null;state.roomList=[];state.member=null;state.members=[];
+    state.pendingInvite="";render();return;
+  }
+  const uid=state.session.user.id;
+  const {data:memberships,error}=await state.client.from("midterm_members")
+    .select("room_id,user_id,display_name").eq("user_id",uid);
   if (error) throw error;
-  if (!member) { state.room=null;state.member=null;state.members=[];state.picks=[];state.results=[];state.totals=[];state.leaderboard=[];render();return; }
-  const response = await state.client.from("midterm_rooms").select("id,code,owner_id,mode").eq("id",member.room_id).single();
-  if (response.error) throw response.error;
-  state.room=response.data;state.member=member;
+  const joined=memberships||[];
+  if (!joined.length) {
+    state.room=null;state.roomList=[];state.member=null;state.members=[];
+    state.picks=[];state.results=[];state.totals=[];state.leaderboard=[];
+    state.pendingInvite=(new URLSearchParams(location.search).get("room")||"").toUpperCase();
+    render();return;
+  }
+  const {data:rooms,error:roomsError}=await state.client.from("midterm_rooms")
+    .select("id,code,owner_id,mode").in("id",joined.map(function (m) { return m.room_id; }));
+  if (roomsError) throw roomsError;
+  state.roomList=rooms||[];
+  const invitation=(new URLSearchParams(location.search).get("room")||"").toUpperCase();
+  const invitedRoom=state.roomList.find(function (room) { return room.code===invitation; });
+  state.pendingInvite=invitation&&!invitedRoom?invitation:"";
+  let storedRoomId=null;
+  try {storedRoomId=localStorage.getItem(ACTIVE_ROOM_KEY);} catch (_) {}
+  const chosen=state.roomList.find(function (r) { return r.id===state.preferredRoomId; }) ||
+    invitedRoom ||
+    state.roomList.find(function (r) { return r.id===storedRoomId; }) ||
+    state.roomList[0];
+  if (!chosen) {state.room=null;state.member=null;state.members=[];render();return;}
+  state.room=chosen;
+  state.member=joined.find(function (m) { return m.room_id===chosen.id; });
+  try {localStorage.setItem(ACTIVE_ROOM_KEY,chosen.id);} catch (_) {}
   await loadData();
   subscribeToRoom();
 }
-
 async function loadData() {
   if (!state.room || !state.client) {render();return;}
   const roomId=state.room.id;
@@ -600,6 +646,19 @@ function bindEvents() {
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
     }
     if (action==="copy-code") copyInvite();
+    if (action==="new-room") {
+      state.creatingNewRoom=true;state.pendingInvite="";renderAccount();
+    }
+    if (action==="cancel-new-room") {
+      state.creatingNewRoom=false;state.pendingInvite="";renderAccount();
+    }
+    if (action==="switch-room") {
+      const roomId=target.dataset.room;
+      if (!state.roomList.some(function (r) { return r.id===roomId; })) return;
+      state.preferredRoomId=roomId;
+      state.pendingInvite="";state.creatingNewRoom=false;
+      bootUser().then(function () {renderAccount();notify("Challenge switched");}).catch(fail);
+    }
     if (action==="signout") signOut();
   });
   document.addEventListener("submit",function (event) {
