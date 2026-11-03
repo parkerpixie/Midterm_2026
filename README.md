@@ -28,6 +28,17 @@ The homepage and party imagery now use Parker's supplied artwork. The HTML/CSS l
 
 See [assets/README.md](assets/README.md) for file names and details.
 
+## Final Supabase sign-in settings for this project
+
+The current project is **MietermElection2026**. The core database and public Supabase connection are installed. Two dashboard changes remain:
+
+1. In **Supabase → Authentication → URL Configuration**, set the site URL to `https://votemidterms2026.netlify.app` and add `https://votemidterms2026.netlify.app/**` to the allowed redirect URLs. This matters for email magic links.
+2. In **Supabase → Authentication → Providers**, turn on **Anonymous Sign-Ins**. This unlocks the guest button so friends can play without being sent an email.
+
+After changing the settings, test on two different browsers/devices before posting a Facebook invitation.
+
+**Security note:** Anonymous sign-ins are convenient for a friends-only event but accounts are not recoverable after browser storage is cleared. Publicly sharing the invitation more widely can attract automated account creation. For a larger open-to-the-world competition, add bot protection and the corresponding frontend CAPTCHA flow.
+
 ## Joining and finding the leaderboard (community edition)
 
 The site now has **Join / Profile** and **🏆 Leaderboard** buttons right in the header, plus a visible three-step explainer below the main banner.
@@ -71,7 +82,7 @@ Use a **dedicated Supabase project** if possible, so it doesn't alter an older a
 3. Open **Project Settings → API Keys** (name may vary) and copy the **Project URL** and **publishable key**. A legacy anon key can also work. **Never put a secret/service_role key in this repository.**
 4. Edit [config.js](config.js) on GitHub and fill in the two public values: the project URL in **supabaseUrl** and the publishable key in **publishableKey**.
 5. Under **Authentication → URL Configuration** in Supabase, set **Site URL** to your actual Netlify address, and add that origin to **Redirect URLs** (for example, the full Netlify domain followed by /**).
-6. Ensure **Email** authentication is enabled. Default Supabase email magic links are fine for two users, subject to your project's email sending limits.
+6. For the simplest Facebook-friendly setup, go to **Authentication → Providers → Anonymous** in Supabase and enable anonymous sign-ins. New players can then tap **Join instantly as a guest**, choose a nickname, and join the shared board with the invitation code. Guest sessions live in that browser only and cannot be recovered after signing out or clearing browsing data. **Email magic links to arbitrary friends require custom SMTP**, because Supabase's default SMTP only sends to the project's authorized team addresses. Do not rely on email for Facebook sharing until custom SMTP is configured.
 7. Let Netlify redeploy from the GitHub commit to config.js, then refresh the app.
 
 ### 3. Start the household showdown
