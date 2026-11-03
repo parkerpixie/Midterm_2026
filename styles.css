@@ -56,3 +56,77 @@ body{background:linear-gradient(180deg,#fff6df 0%,#f5f5f0 30%,#f4f7f4 100%)}
 @media(max-width:360px){
  .party-art-card img{height:120px}
 }
+
+
+/* Candidate-by-name pickers and optional Community Challenge leaderboard */
+#playerShowdown[hidden],#leaderboardSection[hidden]{display:none!important}
+.candidate-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:7px}
+.candidate-button{background:#fafaf7;border:1.5px solid #e3e6df;border-radius:11px;min-width:0;padding:9px 8px;display:flex;align-items:center;gap:8px;text-align:left;color:#22324e;transition:background .14s,box-shadow .14s,border .14s}
+.candidate-button:hover{border-color:#b2bcb7;box-shadow:0 2px 8px rgba(20,32,71,.06)}
+.candidate-button.selected.dem{background:#e3edff;border-color:#315fe8;box-shadow:0 0 0 1px #315fe8}
+.candidate-button.selected.rep{background:#fff0f1;border-color:#d55460;box-shadow:0 0 0 1px #d55460}
+.candidate-button.selected.other{background:#fff2cb;border-color:#d49c21;box-shadow:0 0 0 1px #d49c21}
+.candidate-avatar{height:31px;width:31px;min-width:31px;display:grid;place-items:center;border-radius:50%;background:#e4e9f4;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:11px}
+.candidate-avatar.dem{background:#dde8ff;color:#2e54a9}
+.candidate-avatar.rep{background:#ffe2e3;color:#b3464c}
+.candidate-avatar.other{background:#f7e6b8;color:#916814}
+.candidate-details{display:block;min-width:0;flex:1}
+.candidate-details strong{display:block;font-size:11px;line-height:1.25;letter-spacing:-.02em;overflow-wrap:anywhere}
+.candidate-details small{display:block;font-size:9px;color:#738097;margin-top:3px;line-height:1.25}
+.candidate-check{font-size:14px;color:#8e9bad;margin-left:auto}
+.candidate-button.selected .candidate-check{color:#254c85;font-weight:900}
+.pick-summary{display:flex;flex-wrap:wrap;gap:8px;line-height:1.45;justify-content:space-between}
+.pick-summary span{max-width:100%}
+.pick-summary strong{font-size:10px}
+.result-select{width:100%;padding:10px 11px;border-radius:10px;border:1px solid #dbe3ed;color:#26354d;background:#fbfaf7;font-size:11px;font-weight:700}
+.result-select:disabled{opacity:.55;cursor:not-allowed}
+.call-hint{font-size:10px;color:#8c96a6;margin-top:7px;line-height:1.4}
+.race-card{display:flex;flex-direction:column}
+.race-card .result-strip{margin-top:auto;padding-top:14px}
+.race-card .pick-summary{margin-bottom:14px}
+.filter-row select{max-width:158px}
+#stateFilter{min-width:128px}
+.ballot-progress{margin:33px 0 28px;padding:26px;border:2px solid #d8d2bb;border-radius:20px;background:linear-gradient(120deg,#fff9e8 0%,#fcfdf4 85%);box-shadow:5px 5px 0 rgba(91,115,89,.1)}
+.progress-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.progress-heading h3{font-family:'Space Grotesk',sans-serif;font-size:27px;letter-spacing:-.045em;margin:3px 0 0}
+.progress-heading strong{font-family:'Space Grotesk',sans-serif;color:#2d5e4a;font-size:16px}
+.completion-meter{height:17px;width:100%;border-radius:20px;background:#e4eadf;margin:19px 0 12px;border:1px solid #d5e2d4;overflow:hidden}
+.completion-meter>div{height:100%;width:0;background:linear-gradient(90deg,#89bdab,#2e8270);border-radius:20px;transition:width .3s}
+.progress-footer{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.progress-footer>span{font-size:13px;font-weight:800;color:#417963}
+.ballot-progress .fine-print{margin:10px 0 0}
+.ballot-progress .button{padding:11px 14px;min-height:40px;background:#eac568;box-shadow:2px 2px 0 #4d684d;border-color:#9c8a55}
+.leaderboard-list{background:white;border:1px solid #e3e8e8;border-radius:19px;overflow:hidden;box-shadow:0 8px 26px rgba(21,32,71,.05)}
+.leaderboard-row{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid #edf0f3;min-width:0}
+.leaderboard-row:last-child{border-bottom:0}
+.leader-rank{width:34px;font-size:20px;flex:0 0 34px;text-align:center;font-family:'Space Grotesk',sans-serif;color:#69838e;font-weight:800}
+.leader-avatar{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:50%;background:#f6e5b4;color:#4c553e;font-size:16px;font-weight:900;border:2px solid white;box-shadow:0 0 0 1px #e4e9e0}
+.leader-info{min-width:0;flex:1}
+.leader-info>strong{font-size:14px;display:block;overflow-wrap:anywhere}
+.leader-info small{font-size:11px;display:block;color:#808da0;margin-top:3px}
+.leader-mini-progress{height:5px;background:#edf2ed;border-radius:10px;margin-top:7px;max-width:330px;overflow:hidden}
+.leader-mini-progress span{background:#7eac9a;display:block;height:100%}
+.leader-points{font-family:'Space Grotesk',sans-serif;font-size:22px;color:#294566;font-weight:900;white-space:nowrap}
+.leader-points small{font-size:10px;color:#8593a2}
+.leaderboard-section{margin:36px 0}
+.mode-select{width:100%;background:#f7f9fe;border:1px solid #dce3f0;border-radius:10px;padding:12px;color:#22344b;margin-top:7px}
+@media(max-width:940px){.race-controls{align-items:stretch}.filter-row{width:100%}.search-label{flex:1}.search-label input{width:100%}}
+@media(max-width:730px){
+ .filter-row{gap:7px;flex-wrap:wrap}
+ .filter-row .search-label{flex:1 1 100%}
+ .filter-row select{flex:1;max-width:none;min-width:0}
+ .candidate-options{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
+ .candidate-button{padding:9px}
+ .ballot-progress{margin:25px 0 18px;padding:18px}
+ .progress-heading{display:block}
+ .progress-heading h3{font-size:23px}
+ .progress-heading strong{display:block;margin-top:12px;font-size:14px}
+ .progress-footer{align-items:stretch;flex-direction:column}
+ .progress-footer .button{width:100%}
+ .leaderboard-row{padding:12px;gap:8px}
+ .leader-rank{width:28px;flex-basis:28px;font-size:16px}
+ .leader-avatar{height:31px;width:31px;flex-basis:31px;font-size:14px}
+ .leader-info>strong{font-size:12px}
+ .leader-info small{font-size:10px}
+ .leader-points{font-size:19px}
+}
