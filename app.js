@@ -3,6 +3,7 @@
    and realtime changes to sync each signed-in player's picks and shared results.
    The app never claims a result unless one of the players enters it. */
 const RACES = window.MIDTERM_RACES || [];
+const CANDIDATES = window.MIDTERM_CANDIDATES || {};
 const RACE_IDS = new Set(RACES.map(function (r) { return r.id; }));
 const PREVIEW_KEY = "ballot_board_2026_preview_v1";
 const PARTY = { D:"D", R:"R", O:"Other" };
@@ -11,7 +12,7 @@ let cachedPreview;
 try { cachedPreview = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch (_) { cachedPreview = null; }
 const state = {
   demo:true, client:null, session:null, room:null, member:null, members:[],
-  picks:[], results:[], totals:[], channel:null, view:"featured", filter:"all", search:"",
+  picks:[], results:[], totals:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
   persona:"Parker", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
@@ -46,12 +47,40 @@ function participants() {
     ? [{user_id:"Parker",display_name:"Parker"}, {user_id:"Blake",display_name:"Blake"}]
     : state.members;
 }
-function myPick(raceId, userId) {
-  return allPicks().find(function (p) { return p.race_id === raceId && p.user_id === userId; })?.party || "";
+
+function candidatesFor(raceId) { return CANDIDATES[raceId] || []; }
+function candidateFor(raceId,choice) {
+  const candidates=candidatesFor(raceId);
+  const exact=candidates.find(function (c) { return c.id === choice; });
+  if (exact) return exact;
+  // Old party-only selections are displayed but never mistaken for named picks.
+  return null;
+}
+function displayChoice(raceId,choice) {
+  const c=candidateFor(raceId,choice);
+  return c ? c.name : (PARTY[choice] ? PARTY[choice]+" (old party pick)" : "—");
+}
+function rowChoice(row) { return row ? (row.candidate_id || row.party || "") : ""; }
+function myPick(raceId,userId) {
+  return rowChoice(allPicks().find(function (p) { return p.race_id===raceId && p.user_id===userId; }));
 }
 function calledParty(raceId) {
-  return allResults().find(function (r) { return r.race_id === raceId; })?.party || "";
+  return rowChoice(allResults().find(function (r) { return r.race_id===raceId; }));
 }
+function canManageResults() {
+  return state.demo || (!!state.room && !!state.session &&
+    (state.room.mode!=="community" || state.room.owner_id===state.session.user.id));
+}
+function raceScores(person) {
+  const valid=allPicks().filter(function (p) {
+    return p.user_id===person.user_id && RACE_IDS.has(p.race_id) && !!candidateFor(p.race_id,rowChoice(p));
+  });
+  const judged=valid.filter(function (p) { return !!candidateFor(p.race_id,calledParty(p.race_id)); });
+  const correct=judged.filter(function (p) { return rowChoice(p)===calledParty(p.race_id); }).length;
+  return {correct:correct, picked:valid.length, judged:judged.length,
+    accuracy:judged.length?Math.round(correct/judged.length*100):null};
+}
+
 function isSet(v) { return typeof v === "number" && Number.isFinite(v); }
 function render() {
   const online = !state.demo && !!state.room && !!state.member;
@@ -73,6 +102,8 @@ function render() {
   }
   renderChambers();
   renderPlayers();
+  renderLeaderboard();
+  renderProgress();
   renderRaces();
 }
 function renderChambers() {
@@ -102,129 +133,202 @@ function renderChambers() {
     }
   });
 }
+
 function renderPlayers() {
-  let people = participants();
-  if (!state.demo && people.length === 1) people = people.concat([{user_id:"pending",display_name:"Player 2"}]);
-  if (!people.length) people = [{user_id:"none",display_name:"Sign in to play"},{user_id:"pending",display_name:"Player 2"}];
-  el("playerGrid").innerHTML = people.slice(0,2).map(function (person,index) {
-    const picks = allPicks().filter(function (p) { return p.user_id === person.user_id && RACE_IDS.has(p.race_id); });
-    const judged = picks.filter(function (p) { return !!calledParty(p.race_id); });
-    const correct = judged.filter(function (p) { return p.party === calledParty(p.race_id); }).length;
-    const progress = picks.length / Math.max(1,RACES.length) * 100;
-    const own = person.user_id === currentId();
-    const name = escapeHtml(person.display_name);
+  const community=!state.demo && state.room && state.room.mode==="community";
+  el("playerShowdown").hidden=!!community;
+  if (community) return;
+  let people=participants();
+  if (!state.demo && people.length===1) people=people.concat([{user_id:"pending",display_name:"Player 2"}]);
+  if (!people.length) people=[{user_id:"none",display_name:"Sign in to play"},{user_id:"pending",display_name:"Player 2"}];
+  el("playerGrid").innerHTML=people.slice(0,2).map(function (person,index) {
+    const score=raceScores(person);
+    const own=person.user_id===currentId();
     return '<article class="player-card '+(index===0?'parker':'blake')+'">'+
       '<div class="player-card-header"><div class="player-avatar" aria-hidden="true">'+(index===0?'🔮':'🦊')+'</div>'+
-      '<div><div class="player-name">'+name+(own?' ✦':'')+'</div><div class="player-caption">'+(own?'Your prediction desk':'Prediction desk')+'</div></div></div>'+
-      '<div class="player-stats"><div class="player-stat"><strong>'+correct+'</strong><small>Correct calls</small></div>'+
-      '<div class="player-stat"><strong>'+picks.length+'</strong><small>Races picked</small></div>'+
-      '<div class="player-stat"><strong>'+(judged.length?Math.round(correct/judged.length*100)+'%':'—')+'</strong><small>Accuracy*</small></div></div>'+
-      '<div class="progress-track"><span style="width:'+progress+'%"></span></div>'+
-      '<div class="player-caption" style="margin-top:8px">*Based only on called races with a prediction</div></article>';
+      '<div><div class="player-name">'+escapeHtml(person.display_name)+(own?' ✦':'')+'</div><div class="player-caption">'+(own?'Your prediction desk':'Prediction desk')+'</div></div></div>'+
+      '<div class="player-stats"><div class="player-stat"><strong>'+score.correct+'</strong><small>Correct calls</small></div>'+
+      '<div class="player-stat"><strong>'+score.picked+'</strong><small>Races picked</small></div>'+
+      '<div class="player-stat"><strong>'+(score.accuracy===null?'—':score.accuracy+'%')+'</strong><small>Accuracy*</small></div></div>'+
+      '<div class="progress-track"><span style="width:'+(score.picked/Math.max(1,RACES.length)*100)+'%"></span></div>'+
+      '<div class="player-caption" style="margin-top:8px">*Based on picked races with a named result</div></article>';
   }).join("");
 }
+function renderLeaderboard() {
+  const isCommunity=!state.demo && state.room && state.room.mode==="community";
+  const section=el("leaderboardSection");
+  section.hidden=!isCommunity && !state.demo;
+  if (section.hidden) return;
+  el("leaderboardIntro").textContent=state.demo
+    ? "This is a two-player preview. Connect Supabase and create a Community Challenge for your Facebook friends to join."
+    : "Players earn one point per correctly predicted candidate after the host enters a race call. Ties stay tied.";
+  const entries=participants().map(function (p) { return {...p,score:raceScores(p)}; })
+    .sort(function (a,b) {
+      return b.score.correct-a.score.correct || b.score.picked-a.score.picked ||
+        a.display_name.localeCompare(b.display_name);
+    });
+  let rank=0,previous=null;
+  el("leaderboardList").innerHTML=entries.map(function (p,i) {
+    const points=p.score.correct;
+    if (points!==previous) rank=i+1;
+    previous=points;
+    const percent=Math.round(p.score.picked/Math.max(1,RACES.length)*100);
+    const own=p.user_id===currentId();
+    return '<div class="leaderboard-row">'+
+      '<span class="leader-rank">'+rank+'</span>'+
+      '<span class="leader-avatar">'+escapeHtml(p.display_name.charAt(0).toUpperCase())+'</span>'+
+      '<div class="leader-info"><strong>'+escapeHtml(p.display_name)+(own?' ✦':'')+'</strong>'+
+      '<small>'+p.score.picked+'/'+RACES.length+' picks completed • '+(p.score.accuracy===null?'No calls yet':p.score.accuracy+'% correct on calls')+'</small>'+
+      '<div class="leader-mini-progress"><span style="width:'+percent+'%"></span></div></div>'+
+      '<span class="leader-points">'+points+' <small>pts</small></span></div>';
+  }).join("") || '<p class="fine-print">No players yet. Join the challenge to appear here.</p>';
+  el("leaderboardCount").textContent=entries.length+" player"+(entries.length===1?"":"s");
+}
+function renderProgress() {
+  const id=currentId(),mine=RACES.filter(function (r) { return id && !!candidateFor(r.id,myPick(r.id,id)); });
+  const count=mine.length;
+  const unpicked=Math.max(0,RACES.length-count);
+  el("progressCount").textContent=count+" of "+RACES.length+" races picked";
+  el("progressFill").style.width=(count/Math.max(1,RACES.length)*100)+"%";
+  el("unfinishedCount").textContent=unpicked===0
+    ? "✓ Your tracked ballot is complete!"
+    : unpicked+" left to predict";
+  el("nextUnpickedButton").disabled=unpicked===0;
+}
+
+
 function filteredRaces() {
   return RACES.filter(function (race) {
-    if (state.view === "featured" && !race.featured) return false;
-    if (state.view === "senate" && race.chamber !== "senate") return false;
-    if (state.view === "house" && race.chamber !== "house") return false;
-    if (state.filter === "open" && calledParty(race.id)) return false;
-    if (state.filter === "called" && !calledParty(race.id)) return false;
-    if (state.filter === "unpicked" && (!currentId() || myPick(race.id,currentId()))) return false;
-    if (state.search && !(race.title+" "+race.name+" "+race.id+" "+race.rating).toLowerCase().includes(state.search)) return false;
+    if (state.view==="featured" && !race.featured) return false;
+    if (state.view==="senate" && race.chamber!=="senate") return false;
+    if (state.view==="house" && race.chamber!=="house") return false;
+    if (state.stateCode!=="all" && race.state!==state.stateCode) return false;
+    if (state.filter==="open" && calledParty(race.id)) return false;
+    if (state.filter==="called" && !calledParty(race.id)) return false;
+    if (state.filter==="unpicked" && (!currentId() || candidateFor(race.id,myPick(race.id,currentId())))) return false;
+    if (state.search && !(race.title+" "+race.name+" "+race.id+" "+race.rating+" "+
+        candidatesFor(race.id).map(function (c) { return c.name; }).join(" ")).toLowerCase().includes(state.search)) return false;
     return true;
   }).sort(function (a,b) {
-    const aw = !!calledParty(a.id), bw = !!calledParty(b.id);
-    if (aw !== bw) return Number(aw)-Number(bw);
-    if (a.chamber !== b.chamber) return a.chamber === "senate" ? -1 : 1;
-    if (a.rating === "Toss Up" && b.rating !== "Toss Up") return -1;
-    if (b.rating === "Toss Up" && a.rating !== "Toss Up") return 1;
+    const aw=!!calledParty(a.id),bw=!!calledParty(b.id);
+    if (aw!==bw) return Number(aw)-Number(bw);
+    if (a.chamber!==b.chamber) return a.chamber==="senate"?-1:1;
+    if (a.rating==="Toss Up" && b.rating!=="Toss Up") return -1;
+    if (b.rating==="Toss Up" && a.rating!=="Toss Up") return 1;
     return a.title.localeCompare(b.title);
   });
 }
-function choice(raceId, party, selected, action, label) {
-  return '<button type="button" class="choice '+(selected===party?'is-'+party.toLowerCase():'')+
-    '" data-action="'+action+'" data-race="'+raceId+'" data-party="'+party+'" aria-pressed="'+String(selected===party)+'">'+label+'</button>';
+
+
+function candidateButton(raceId,candidate,selected) {
+  const initials=candidate.name.split(/\s+/).filter(Boolean).slice(0,2).map(function (w) { return w[0]; }).join("").toUpperCase();
+  const partyClass=candidate.party==="D"?"dem":candidate.party==="R"?"rep":"other";
+  return '<button type="button" class="candidate-button '+partyClass+(selected===candidate.id?' selected':'')+
+    '" data-action="pick" data-race="'+escapeHtml(raceId)+'" data-candidate="'+escapeHtml(candidate.id)+'"'+
+    ' aria-pressed="'+String(selected===candidate.id)+'" title="'+escapeHtml(candidate.name+' • '+candidate.partyName)+'">'+
+    '<span class="candidate-avatar '+partyClass+'">'+escapeHtml(initials)+'</span>'+
+    '<span class="candidate-details"><strong>'+escapeHtml(candidate.name)+'</strong>'+
+    '<small>'+escapeHtml(candidate.partyName)+'</small></span>'+
+    '<span class="candidate-check" aria-hidden="true">'+(selected===candidate.id?'✓':'○')+'</span></button>';
 }
 function raceCard(race) {
-  const my = myPick(race.id, currentId());
-  const result = calledParty(race.id);
-  const people = participants().slice(0,2);
-  const personSummaries = people.map(function (p) {
-    const picked = myPick(race.id,p.user_id);
-    return '<span>'+escapeHtml(p.display_name)+': <strong>'+(picked ? PARTY[picked] : '—')+'</strong></span>';
+  const my=myPick(race.id,currentId());
+  const result=calledParty(race.id);
+  const people=participants().slice(0,2);
+  const candidates=candidatesFor(race.id);
+  const canCall=canManageResults();
+  const personSummaries=people.map(function (p) {
+    const picked=myPick(race.id,p.user_id);
+    return '<span>'+escapeHtml(p.display_name)+': <strong>'+escapeHtml(displayChoice(race.id,picked))+'</strong></span>';
   }).join("");
-  const correct = result && my && result === my;
-  const badge = result ? '<span class="tag called">✓ CALLED</span>'
-    : race.featured ? '<span class="tag featured">★ FEATURED</span>'
-    : '<span class="tag pending">UNCALLED</span>';
+  const correct=result && candidateFor(race.id,result) && my===result;
+  const badge=result?'<span class="tag called">✓ CALLED</span>':
+    race.featured?'<span class="tag featured">★ FEATURED</span>':'<span class="tag pending">UNCALLED</span>';
+  const selection='<div class="candidate-options">'+candidates.map(function (cand) {
+    return candidateButton(race.id,cand,my);
+  }).join("")+'</div>';
+  const resultOptions='<select class="result-select" data-result-race="'+escapeHtml(race.id)+'" aria-label="Called winner for '+escapeHtml(race.title)+'"'+(!canCall?' disabled':'')+'>'+
+    '<option value="">Not called</option>'+candidates.map(function (cand) {
+      return '<option value="'+escapeHtml(cand.id)+'"'+(result===cand.id?' selected':'')+'>'+
+      escapeHtml(cand.name+' ('+cand.partyName+')')+'</option>';
+    }).join("")+'</select>';
   return '<article class="race-card '+(result?'called':'')+'">'+
     '<div class="race-card-top"><span class="race-type">'+(race.chamber==='senate'?'SENATE':'HOUSE')+' • '+race.state+'</span>'+badge+'</div>'+
     '<h4>'+escapeHtml(race.title)+'</h4><p class="race-subtitle">'+escapeHtml(race.rating)+' • '+escapeHtml(race.subtitle)+'</p>'+
-    '<div class="mini-label">YOUR PREDICTION</div><div class="pick-row">'+
-      choice(race.id,"D",my,"pick","D")+choice(race.id,"R",my,"pick","R")+
-      choice(race.id,"O",my,"pick","Other")+
-      '<button class="choice clear" type="button" data-action="clear-pick" data-race="'+race.id+'" aria-label="Clear my prediction">×</button></div>'+
-    '<div class="pick-summary">'+personSummaries+'</div>'+
+    '<div class="mini-label">WHO DO YOU THINK WILL WIN?</div>'+selection+
+    '<div class="pick-summary">'+(state.room?.mode==="community"?'Your pick: '+escapeHtml(displayChoice(race.id,my)):personSummaries)+'</div>'+
     '<div class="result-strip"><div class="result-head"><span class="result-text '+(result?'winner':'')+'">'+
-      (result ? '✓ Called winner: '+PARTY[result] : '◌ Awaiting a verified call')+'</span>'+
+      (result?'✓ Called: '+escapeHtml(displayChoice(race.id,result)):'◌ Awaiting a verified call')+'</span>'+
       (correct?'<span class="score-star">★ Point!</span>':'')+'</div>'+
-      '<div class="pick-row">'+choice(race.id,"D",result,"call","D")+
-      choice(race.id,"R",result,"call","R")+choice(race.id,"O",result,"call","Other")+
-      '<button class="choice clear" type="button" data-action="clear-call" data-race="'+race.id+'" aria-label="Clear called winner">×</button></div></div></article>';
+      resultOptions+(canCall?'<div class="call-hint">Enter confirmed results only. This is not a live feed.</div>':
+      '<div class="call-hint">Only the community host can enter a result.</div>')+'</div></article>';
 }
+
+
 function renderRaces() {
   document.querySelectorAll(".tab").forEach(function (b) {
-    const chosen = b.dataset.view === state.view;
-    b.classList.toggle("selected",chosen);
-    b.setAttribute("aria-selected",String(chosen));
+    const selected=b.dataset.view===state.view;
+    b.classList.toggle("selected",selected);
+    b.setAttribute("aria-selected",String(selected));
   });
-  const races = filteredRaces();
-  el("raceCount").textContent = races.length + " of " + RACES.length + " races";
-  el("raceGrid").innerHTML = races.length
-    ? races.map(raceCard).join("")
-    : '<div class="empty-state"><span class="big">🔎</span><strong>No races match those filters</strong><p>Try another search or category.</p></div>';
+  el("stateFilter").value=state.stateCode;
+  el("raceFilter").value=state.filter;
+  const races=filteredRaces();
+  el("raceCount").textContent=races.length+" of "+RACES.length+" tracked races";
+  el("raceGrid").innerHTML=races.length?races.map(raceCard).join(""):
+    '<div class="empty-state"><span class="big">🔎</span><strong>No races match those filters</strong><p>Try another state, status, or category.</p></div>';
 }
-async function savePick(raceId,party) {
-  if (!RACE_IDS.has(raceId) || (party && !PARTY[party])) return;
-  const userId = currentId();
+
+
+async function savePick(raceId,candidateId) {
+  if (!RACE_IDS.has(raceId)) return;
+  const candidate=candidateId?candidateFor(raceId,candidateId):null;
+  if (candidateId && !candidate) return notify("Candidate not found in this race.");
+  const userId=currentId();
   if (!userId) return openAccount();
   if (state.demo) {
-    state.preview.picks = state.preview.picks.filter(function (p) { return !(p.race_id===raceId && p.user_id===userId); });
-    if (party) state.preview.picks.push({race_id:raceId,user_id:userId,party:party});
+    state.preview.picks=state.preview.picks.filter(function (p) { return !(p.race_id===raceId&&p.user_id===userId); });
+    if (candidate) state.preview.picks.push({race_id:raceId,user_id:userId,party:candidate.party,candidate_id:candidate.id});
     savePreview(); render(); return;
   }
   try {
     let res;
-    if (party) res = await state.client.from("midterm_picks").upsert({
-      room_id:state.room.id,user_id:userId,race_id:raceId,party:party
+    if (candidate) res=await state.client.from("midterm_picks").upsert({
+      room_id:state.room.id,user_id:userId,race_id:raceId,party:candidate.party,candidate_id:candidate.id
     },{onConflict:"room_id,user_id,race_id"});
-    else res = await state.client.from("midterm_picks").delete().eq("room_id",state.room.id).eq("user_id",userId).eq("race_id",raceId);
+    else res=await state.client.from("midterm_picks").delete().eq("room_id",state.room.id).eq("user_id",userId).eq("race_id",raceId);
     if (res.error) throw res.error;
-    await loadData();
-    notify("Prediction saved and synced ✨");
+    await loadData(); notify("Candidate prediction saved ✨");
   } catch (error) { fail(error); }
 }
-async function saveCall(raceId,party) {
-  if (!RACE_IDS.has(raceId) || (party && !PARTY[party])) return;
+
+
+async function saveCall(raceId,candidateId) {
+  if (!RACE_IDS.has(raceId)) return;
+  const candidate=candidateId?candidateFor(raceId,candidateId):null;
+  if (candidateId && !candidate) return notify("Candidate not found in this race.");
   if (!state.demo && !currentId()) return openAccount();
+  if (!canManageResults()) return notify("Only the Community Challenge host can enter race calls.");
   if (state.demo) {
-    state.preview.results = state.preview.results.filter(function (r) { return r.race_id!==raceId; });
-    if (party) state.preview.results.push({race_id:raceId,party:party});
+    state.preview.results=state.preview.results.filter(function (r) { return r.race_id!==raceId; });
+    if (candidate) state.preview.results.push({race_id:raceId,party:candidate.party,candidate_id:candidate.id});
     savePreview(); render(); return;
   }
   try {
     let res;
-    if (party) res = await state.client.from("midterm_results").upsert({
-      room_id:state.room.id,race_id:raceId,party:party,updated_by:currentId(),updated_at:new Date().toISOString()
+    if (candidate) res=await state.client.from("midterm_results").upsert({
+      room_id:state.room.id,race_id:raceId,party:candidate.party,candidate_id:candidate.id,
+      updated_by:currentId(),updated_at:new Date().toISOString()
     },{onConflict:"room_id,race_id"});
-    else res = await state.client.from("midterm_results").delete().eq("room_id",state.room.id).eq("race_id",raceId);
+    else res=await state.client.from("midterm_results").delete().eq("room_id",state.room.id).eq("race_id",raceId);
     if (res.error) throw res.error;
     await loadData(); notify("Shared race call updated");
   } catch (error) { fail(error); }
 }
+
 function openTotals() {
   if (!state.demo && !currentId()) return openAccount();
+  if (!canManageResults()) return notify("Only the Community Challenge host can update totals.");
   ["house","senate"].forEach(function (chamber) {
     const t = allTotals().find(function (x) { return x.chamber===chamber; });
     el("totalsForm").elements[chamber+"D"].value = t ? t.dem : "";
@@ -234,6 +338,7 @@ function openTotals() {
 }
 async function saveTotals(event) {
   event.preventDefault();
+  if (!canManageResults()) return notify("Only the Community Challenge host can update totals.");
   const form = el("totalsForm");
   const records = [];
   for (const chamber of ["house","senate"]) {
@@ -272,47 +377,54 @@ function openAccount() {
   el("accountDialog").showModal();
 }
 function accountContent(markup) { el("accountContent").innerHTML = '<div class="modal-body">'+markup+'</div>'; }
+
 function renderAccount() {
   if (state.demo) {
     accountContent('<span class="micro">PREVIEW DESK</span><h3>Who is making picks?</h3>'+
-      '<p>You can try both players here, but this preview is saved on this browser only.</p>'+
+      '<p>Try both players here. Candidate predictions save in this browser only, until Supabase is connected.</p>'+
       '<div class="input-pair"><button type="button" data-action="persona" data-persona="Parker" class="button full '+(state.persona==='Parker'?'primary':'')+'">🔮 Parker</button>'+
       '<button type="button" data-action="persona" data-persona="Blake" class="button full '+(state.persona==='Blake'?'primary':'')+'">🦊 Blake</button></div>'+
-      '<div class="modal-note">To sync between phones, configure a Supabase project in <strong>config.js</strong>, run <strong>schema.sql</strong>, and redeploy the site. Then Parker and Blake can each sign in with their own email.</div>');
+      '<div class="modal-note">To invite Facebook friends and activate the community leaderboard, configure a Supabase project with the new <strong>schema.sql</strong> and <strong>config.js</strong>. The published app is currently a local preview.</div>');
     return;
   }
   if (!state.session) {
-    accountContent('<span class="micro">YOUR OWN PRIVATE PREDICTION DESK</span><h3>Sign in to play ✉️</h3>'+
-      '<p>Enter your email to receive a one-time sign-in link. Parker and Blake should use their own email addresses.</p>'+
+    accountContent('<span class="micro">YOUR OWN PREDICTION DESK</span><h3>Sign in to play ✉️</h3>'+
+      '<p>Each player uses their own email for a one-time sign-in link. Everyone then creates a display name for the leaderboard.</p>'+
       '<form id="emailForm"><label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>'+
       '<button class="button primary full" type="submit">Send my sign-in link</button></form>'+
-      '<div class="modal-note">No password to remember. Sign in once on each phone and your picks will sync automatically.</div>');
+      '<div class="modal-note">Only your display name shows on the community leaderboard. No password to remember.</div>');
     return;
   }
   if (!state.room) {
-    const urlRoom = new URLSearchParams(location.search).get("room") || "";
-    accountContent('<span class="micro">WELCOME TO THE BOARD</span><h3>Start or join your game</h3>'+
-      '<p>Create a private board, then invite the other player with its code. You each keep your own predictions.</p>'+
+    const urlRoom=new URLSearchParams(location.search).get("room")||"";
+    accountContent('<span class="micro">WELCOME TO THE BOARD</span><h3>Start or join a challenge</h3>'+
+      '<p>Make a private two-person game, or a Community Challenge you can share on Facebook.</p>'+
       '<form id="createRoomForm"><label>Your display name<input name="display_name" maxlength="30" placeholder="Parker" required></label>'+
-      '<button type="submit" class="button primary full">✦ Create our board</button></form>'+
+      '<label>Challenge type<select name="mode" class="mode-select"><option value="duo">Private game (2 players)</option>'+
+      '<option value="community">Community Challenge (share with friends)</option></select></label>'+
+      '<button type="submit" class="button primary full">✦ Create challenge</button></form>'+
       '<div class="divider-text">OR JOIN SOMEONE ELSE</div>'+
       '<form id="joinRoomForm"><label>Invitation code<input name="code" value="'+escapeHtml(urlRoom)+'" maxlength="10" placeholder="10-character code" required autocapitalize="characters"></label>'+
-      '<label>Your display name<input name="display_name" maxlength="30" placeholder="Blake" required></label>'+
-      '<button type="submit" class="button primary full">Join shared board</button></form>'+
+      '<label>Your display name<input name="display_name" maxlength="30" placeholder="Your leaderboard name" required></label>'+
+      '<button type="submit" class="button primary full">Join challenge</button></form>'+
       '<button type="button" class="link-button" data-action="signout">Sign out</button>');
     return;
   }
-  const code = escapeHtml(state.room.code);
-  const members = participants().map(function (m) {
+  const code=escapeHtml(state.room.code),community=state.room.mode==="community";
+  const members=participants().slice(0,5).map(function (m) {
     return '<span class="member-chip">✦ '+escapeHtml(m.display_name)+'</span>';
   }).join("");
-  accountContent('<span class="micro">YOUR SHARED ELECTION NIGHT</span><h3>The prediction party 🎉</h3>'+
-    '<p>Both phones see the same calls and seat totals. Your predictions stay under your own account.</p>'+
-    '<div>'+members+'</div><div class="mini-label" style="margin-top:18px">INVITE CODE</div><div class="invite-code">'+code+'</div>'+
+  accountContent('<span class="micro">'+(community?'COMMUNITY CHALLENGE':'YOUR TWO-PLAYER GAME')+'</span>'+
+    '<h3>'+ (community?'The public prediction party 🎉':'Your shared election night 🎉')+'</h3>'+
+    '<p>'+ (community?'Share this link anywhere. Friends sign in, create a display name, and appear on the leaderboard. Only the host can enter called winners.':
+    'Both phones see the same results, while each player controls their own predictions.')+'</p>'+
+    '<div>'+members+(state.members.length>5?' <span class="member-chip">+'+(state.members.length-5)+' more</span>':'')+'</div>'+
+    '<div class="mini-label" style="margin-top:18px">INVITE CODE</div><div class="invite-code">'+code+'</div>'+
     '<button type="button" data-action="copy-code" class="button primary full">Copy invitation link</button>'+
-    '<div class="modal-note">Have Blake open this link, sign in using his own email, and join your board with the code.</div>'+
+    '<div class="modal-note">Each person uses their own email address and picks their own display name. Your friends will share only this challenge, not your private boards.</div>'+
     '<button type="button" class="link-button" data-action="signout">Sign out</button>');
 }
+
 async function sendEmail(form) {
   const email = form.elements.email.value.trim();
   const redirect = location.origin + location.pathname + location.search;
@@ -324,13 +436,14 @@ async function sendEmail(form) {
 async function createRoom(form) {
   if (!state.session) throw new Error("Sign in before creating a board.");
   const name = form.elements.display_name.value.trim();
+  const mode = form.elements.mode.value==="community"?"community":"duo";
   if (!name || name.length>30) throw new Error("Please use a name between 1 and 30 characters.");
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const random = new Uint8Array(10);
   crypto.getRandomValues(random);
   const code = [...random].map(function (n) { return alphabet[n%alphabet.length]; }).join("");
   const {data:room,error} = await state.client.from("midterm_rooms")
-    .insert({code:code,owner_id:state.session.user.id}).select().single();
+    .insert({code:code,owner_id:state.session.user.id,mode:mode}).select().single();
   if (error) throw error;
   const created = await state.client.from("midterm_members")
     .insert({room_id:room.id,user_id:state.session.user.id,display_name:name});
@@ -373,7 +486,7 @@ async function bootUser() {
     .select("room_id,user_id,display_name").eq("user_id",uid).limit(1).maybeSingle();
   if (error) throw error;
   if (!member) { state.room=null;state.member=null;state.members=[];state.picks=[];state.results=[];state.totals=[];render();return; }
-  const response = await state.client.from("midterm_rooms").select("id,code,owner_id").eq("id",member.room_id).single();
+  const response = await state.client.from("midterm_rooms").select("id,code,owner_id,mode").eq("id",member.room_id).single();
   if (response.error) throw response.error;
   state.room=response.data;state.member=member;
   await loadData();
@@ -384,8 +497,8 @@ async function loadData() {
   const roomId=state.room.id;
   const results=await Promise.all([
     state.client.from("midterm_members").select("user_id,display_name").eq("room_id",roomId),
-    state.client.from("midterm_picks").select("race_id,user_id,party").eq("room_id",roomId),
-    state.client.from("midterm_results").select("race_id,party").eq("room_id",roomId),
+    state.client.from("midterm_picks").select("race_id,user_id,party,candidate_id").eq("room_id",roomId),
+    state.client.from("midterm_results").select("race_id,party,candidate_id").eq("room_id",roomId),
     state.client.from("midterm_totals").select("chamber,dem,rep").eq("room_id",roomId)
   ]);
   results.forEach(function (response) { if (response.error) throw response.error; });
@@ -429,6 +542,7 @@ async function initializeCloud() {
     render();
   }
 }
+
 function bindEvents() {
   el("accountButton").addEventListener("click",openAccount);
   el("shareButton").addEventListener("click",function () {
@@ -445,15 +559,29 @@ function bindEvents() {
   el("raceFilter").addEventListener("change",function (event) {
     state.filter=event.target.value;renderRaces();
   });
+  el("stateFilter").addEventListener("change",function (event) {
+    state.stateCode=event.target.value;renderRaces();
+  });
+  el("nextUnpickedButton").addEventListener("click",function () {
+    state.view="all"; state.filter="unpicked"; state.stateCode="all";
+    el("raceSearch").value="";state.search="";
+    renderRaces();
+    document.querySelector(".race-section").scrollIntoView({behavior:"smooth"});
+  });
+  document.addEventListener("change",function (event) {
+    const target=event.target;
+    if (target.matches("[data-result-race]")) saveCall(target.dataset.resultRace,target.value);
+  });
   document.addEventListener("click",function (event) {
-    const target=event.target.closest("[data-action], [data-view]");
+    const target=event.target.closest("[data-action],[data-view]");
     if (!target) return;
     if (target.dataset.view) {state.view=target.dataset.view;renderRaces();return;}
-    const action=target.dataset.action, raceId=target.dataset.race, party=target.dataset.party;
-    if (action==="pick") savePick(raceId,party);
-    if (action==="clear-pick") savePick(raceId,"");
-    if (action==="call") saveCall(raceId,party);
-    if (action==="clear-call") saveCall(raceId,"");
+    const action=target.dataset.action,raceId=target.dataset.race;
+    if (action==="pick") {
+      const candidateId=target.dataset.candidate;
+      if (myPick(raceId,currentId())===candidateId) savePick(raceId,"");
+      else savePick(raceId,candidateId);
+    }
     if (action==="persona") {
       state.persona=target.dataset.persona==="Blake"?"Blake":"Parker";
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
@@ -464,8 +592,7 @@ function bindEvents() {
   document.addEventListener("submit",function (event) {
     if (!["emailForm","createRoomForm","joinRoomForm"].includes(event.target.id)) return;
     event.preventDefault();
-    const form=event.target;
-    const submit=form.querySelector('[type="submit"]');
+    const form=event.target,submit=form.querySelector('[type="submit"]');
     if (submit) submit.disabled=true;
     let task;
     if (form.id==="emailForm") task=sendEmail(form);
@@ -474,6 +601,7 @@ function bindEvents() {
     Promise.resolve(task).catch(fail).finally(function () { if (submit) submit.disabled=false; });
   });
 }
+
 bindEvents();
 render();
 initializeCloud();
