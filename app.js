@@ -437,14 +437,14 @@ function renderAccount() {
     return;
   }
   if (!state.session) {
-    accountContent('<span class="micro">YOUR OWN PREDICTION DESK</span><h3>Sign in to play ✉️</h3>'+
-      '<p>Each player uses their own email for a one-time sign-in link. Everyone then creates a display name for the leaderboard.</p>'+
+    accountContent('<span class="micro">YOUR ELECTION NIGHT PREDICTION DESK</span><h3>Join the challenge! 🗳️</h3>'+
+      '<p>The fastest way to play with friends: join as a guest, then choose your nickname. No email or password required.</p>'+
+      '<button type="button" class="button primary full guest-button" data-action="guest-login">🎟️ Join instantly as a guest</button>'+
+      '<p class="fine-print guest-disclaimer">Your guest profile syncs in this challenge but lives on this device. If you sign out or clear browser data, you cannot recover those picks.</p>'+
+      '<div class="divider-text">OR SIGN IN WITH EMAIL</div>'+
       '<form id="emailForm"><label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>'+
-      '<button class="button primary full" type="submit">Send my sign-in link</button></form>'+
-      '<div class="modal-note">Only your display name shows on the community leaderboard. No password to remember.</div>'+
-      '<div class="divider-text">OR PLAY WITH NO EMAIL</div>'+
-      '<button type="button" class="button full guest-button" data-action="guest-login">🎟️ Play as a guest on this device</button>'+
-      '<p class="fine-print guest-disclaimer">Guest profiles still sync with other players, but cannot be recovered if you sign out or clear this browser’s data. The host must enable anonymous sign-ins in Supabase.</p>');
+      '<button class="button full" type="submit">Send my sign-in link</button></form>'+
+      '<div class="modal-note">Email sign-ins for people outside the Supabase project team require the host to configure a custom SMTP email service.</div>');
     return;
   }
   if (!state.room || state.creatingNewRoom || state.pendingInvite) {
