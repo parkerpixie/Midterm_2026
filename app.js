@@ -108,6 +108,7 @@ function render() {
   }
   renderGuide();
   renderChambers();
+  renderGovernors();
   renderPlayers();
   renderLeaderboard();
   renderProgress();
@@ -177,6 +178,22 @@ function renderChambers() {
   });
 }
 
+function renderGovernors() {
+  const races=RACES.filter(function(r) {return r.chamber==="governor";});
+  const tally={D:0,R:0,O:0}, max=Math.max(1,races.length);
+  for (const race of races) {
+    const selected=candidateFor(race.id,calledParty(race.id));
+    if (selected) tally[selected.party]=(tally[selected.party]||0)+1;
+  }
+  const called=tally.D+tally.R+tally.O;
+  el("governorCalledCount").textContent=called+" of "+races.length+" called";
+  el("governorD").textContent=String(tally.D);
+  el("governorR").textContent=String(tally.R);
+  el("governorO").textContent=String(tally.O);
+  el("governorDBar").style.width=(tally.D/max*100)+"%";
+  el("governorRBar").style.width=(tally.R/max*100)+"%";
+  el("governorOBar").style.width=(tally.O/max*100)+"%";
+}
 function renderPlayers() {
   const community=!state.demo && state.room && state.room.mode==="community";
   el("playerShowdown").hidden=!!community;
@@ -249,6 +266,7 @@ function filteredRaces() {
     if (state.view==="featured" && !race.featured) return false;
     if (state.view==="senate" && race.chamber!=="senate") return false;
     if (state.view==="house" && race.chamber!=="house") return false;
+    if (state.view==="governor" && race.chamber!=="governor") return false;
     if (state.stateCode!=="all" && race.state!==state.stateCode) return false;
     if (state.filter==="open" && calledParty(race.id)) return false;
     if (state.filter==="called" && !calledParty(race.id)) return false;
@@ -259,7 +277,7 @@ function filteredRaces() {
   }).sort(function (a,b) {
     const aw=!!calledParty(a.id),bw=!!calledParty(b.id);
     if (aw!==bw) return Number(aw)-Number(bw);
-    if (a.chamber!==b.chamber) return a.chamber==="senate"?-1:1;
+    if (a.chamber!==b.chamber) return ({senate:0,governor:1,house:2}[a.chamber]||0)-({senate:0,governor:1,house:2}[b.chamber]||0);
     if (a.rating==="Toss Up" && b.rating!=="Toss Up") return -1;
     if (b.rating==="Toss Up" && a.rating!=="Toss Up") return 1;
     return a.title.localeCompare(b.title);
@@ -301,7 +319,7 @@ function raceCard(race) {
       escapeHtml(cand.name+' ('+cand.partyName+')')+'</option>';
     }).join("")+'</select>';
   return '<article class="race-card '+(result?'called':'')+'">'+
-    '<div class="race-card-top"><span class="race-type">'+(race.chamber==='senate'?'SENATE':'HOUSE')+' • '+race.state+'</span>'+badge+'</div>'+
+    '<div class="race-card-top"><span class="race-type">'+(race.chamber==='senate'?'SENATE':race.chamber==='governor'?'GOVERNOR':'HOUSE')+' • '+race.state+'</span>'+badge+'</div>'+
     '<h4>'+escapeHtml(race.title)+'</h4><p class="race-subtitle">'+escapeHtml(race.rating)+' • '+escapeHtml(race.subtitle)+'</p>'+incumbentMarkup(race)+
     '<div class="mini-label">WHO DO YOU THINK WILL WIN?</div>'+selection+
     '<div class="pick-summary">'+(state.room?.mode==="community"?'Your pick: '+escapeHtml(displayChoice(race.id,my)):personSummaries)+'</div>'+
