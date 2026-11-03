@@ -403,7 +403,10 @@ function renderAccount() {
       '<p>Each player uses their own email for a one-time sign-in link. Everyone then creates a display name for the leaderboard.</p>'+
       '<form id="emailForm"><label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>'+
       '<button class="button primary full" type="submit">Send my sign-in link</button></form>'+
-      '<div class="modal-note">Only your display name shows on the community leaderboard. No password to remember.</div>');
+      '<div class="modal-note">Only your display name shows on the community leaderboard. No password to remember.</div>'+
+      '<div class="divider-text">OR PLAY WITH NO EMAIL</div>'+
+      '<button type="button" class="button full guest-button" data-action="guest-login">🎟️ Play as a guest on this device</button>'+
+      '<p class="fine-print guest-disclaimer">Guest profiles still sync with other players, but cannot be recovered if you sign out or clear this browser’s data. The host must enable anonymous sign-ins in Supabase.</p>');
     return;
   }
   if (!state.room || state.creatingNewRoom || state.pendingInvite) {
@@ -434,6 +437,7 @@ function renderAccount() {
     '<div class="mini-label" style="margin-top:18px">INVITE CODE</div><div class="invite-code">'+code+'</div>'+
     '<button type="button" data-action="copy-code" class="button primary full">Copy invitation link</button>'+
     '<div class="modal-note">Each person uses their own email address and picks their own display name. Your friends will share only this challenge, not your private boards.</div>'+
+    (state.session?.user?.is_anonymous?'<div class="modal-note">Guest profile: don\'t sign out or clear this browser’s data, or you could lose access to your predictions.</div>':'')+
     '<div class="room-switcher"><div class="mini-label">MY CHALLENGES</div>'+state.roomList.map(function (room) {
       const chosen=room.id===state.room.id;
       return '<button type="button" class="room-switch'+(chosen?' current':'')+
@@ -444,6 +448,33 @@ function renderAccount() {
     '<button type="button" class="link-button" data-action="signout">Sign out</button>');
 }
 
+
+async function signInGuest() {
+  if (!state.client) return notify("First connect your Supabase project to enable sharing.");
+  try {
+    const {data,error}=await state.client.auth.signInAnonymously();
+    if (error) {
+      if (error.code==="anonymous_provider_disabled") throw new Error("Enable Anonymous Sign-Ins in Supabase Authentication first.");
+      throw error;
+    }
+    state.session=data.session;
+    await bootUser();
+    renderAccount();
+    notify("Guest profile ready! Add your nickname to join.");
+  } catch (error) { fail(error); }
+}
+function clearInviteFromAddress() {
+  // Once a member switches boards, don't force the old invite on reload.
+  if (typeof history!=="undefined" && typeof URL!=="undefined") {
+    try {
+      const u=new URL(location.href);
+      if (u.searchParams.has("room")) {
+        u.searchParams.delete("room");
+        history.replaceState(null,"",u.pathname+u.search+u.hash);
+      }
+    } catch (_) {}
+  }
+}
 async function sendEmail(form) {
   const email = form.elements.email.value.trim();
   const redirect = location.origin + location.pathname + location.search;
@@ -468,6 +499,7 @@ async function createRoom(form) {
     .insert({room_id:room.id,user_id:state.session.user.id,display_name:name});
   if (created.error) throw created.error;
   state.preferredRoomId=room.id;
+  clearInviteFromAddress();
   state.creatingNewRoom=false;
   state.pendingInvite="";
   await bootUser();
@@ -646,6 +678,7 @@ function bindEvents() {
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
     }
     if (action==="copy-code") copyInvite();
+    if (action==="guest-login") signInGuest();
     if (action==="new-room") {
       state.creatingNewRoom=true;state.pendingInvite="";renderAccount();
     }
@@ -656,6 +689,7 @@ function bindEvents() {
       const roomId=target.dataset.room;
       if (!state.roomList.some(function (r) { return r.id===roomId; })) return;
       state.preferredRoomId=roomId;
+      clearInviteFromAddress();
       state.pendingInvite="";state.creatingNewRoom=false;
       bootUser().then(function () {renderAccount();notify("Challenge switched");}).catch(fail);
     }
