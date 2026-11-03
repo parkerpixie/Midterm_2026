@@ -198,8 +198,9 @@ function renderPlayers() {
   el("playerGrid").innerHTML=people.slice(0,2).map(function (person,index) {
     const score=raceScores(person);
     const own=person.user_id===currentId();
-    return '<article class="player-card '+(index===0?'parker':'blake')+'">'+
-      '<div class="player-card-header"><div class="player-avatar" aria-hidden="true">'+(index===0?'🔮':'🦊')+'</div>'+
+    const isParker=person.display_name.toLowerCase()==="parker";
+    return '<article class="player-card '+(isParker?'parker':'blake')+'">'+
+      '<div class="player-card-header"><div class="player-avatar" aria-hidden="true">'+(isParker?'🔮':'🦊')+'</div>'+
       '<div><div class="player-name">'+escapeHtml(person.display_name)+(own?' ✦':'')+'</div><div class="player-caption">'+(own?'Your prediction desk':'Prediction desk')+'</div></div></div>'+
       '<div class="player-stats"><div class="player-stat"><strong>'+score.correct+'</strong><small>Correct calls</small></div>'+
       '<div class="player-stat"><strong>'+score.picked+'</strong><small>Races picked</small></div>'+
@@ -318,7 +319,7 @@ function raceCard(race) {
     '<div class="mini-label">WHO DO YOU THINK WILL WIN?</div>'+selection+
     '<div class="pick-summary">'+(state.room?.mode==="community"?'Your pick: '+escapeHtml(displayChoice(race.id,my)):personSummaries)+'</div>'+
     '<div class="result-strip"><div class="result-head"><span class="result-text '+(result?'winner':'')+'">'+
-      (result?'✓ Called: '+escapeHtml(displayChoice(race.id,result)):'◌ Awaiting a verified call')+'</span>'+
+      (result?'✓ Called: '+escapeHtml(displayChoice(race.id,result)):'◌ Awaiting a manual call')+'</span>'+
       (correct?'<span class="score-star">★ Point!</span>':'')+'</div>'+
       resultOptions+(canCall?'<div class="call-hint">Enter confirmed results only. This is not a live feed.</div>':
       '<div class="call-hint">Only the community host can enter a result.</div>')+'</div></article>';
@@ -599,10 +600,12 @@ async function importLocalPicks() {
     if(!RACE_IDS.has(p.race_id)||already.has(p.race_id))continue;
     if(calledParty(p.race_id)){skippedCalled.push(p.race_id);continue;}
     const choice=candidateFor(p.race_id,rowChoice(p));
-    if(!choice)continue;
+    // Old party-only phone saves are kept, even if they need a candidate selection later.
+    const legacyParty=!choice&&["D","R","O"].includes(p.party)?p.party:null;
+    if(!choice&&!legacyParty)continue;
     already.add(p.race_id);
     rows.push({room_id:state.room.id,user_id:currentId(),race_id:p.race_id,
-      party:choice.party,candidate_id:choice.id});
+      party:choice?choice.party:legacyParty,candidate_id:choice?choice.id:null});
   }
   if(!rows.length){
     return notify(source.length?"No missing, uncalled picks to import. Original phone save is safe.":"No saved picks for "+name+" found on this phone.");
@@ -613,7 +616,9 @@ async function importLocalPicks() {
     if(error)throw error;
     await loadData();
     renderAccount();
-    notify("Restored "+rows.length+" saved picks! "+(skippedCalled.length?skippedCalled.length+" already-called races skipped.":"Original backup untouched. 🎉"));
+    const partyOnly=rows.filter(function(p){return !p.candidate_id;}).length;
+    notify("Imported "+rows.length+" saved predictions! "+(partyOnly?partyOnly+" older party picks need a candidate chosen. ":"")+
+      (skippedCalled.length?skippedCalled.length+" called races skipped.":"Original copy untouched. 🎉"));
   }catch(error){fail(error);}
 }
 async function importLocalCalls() {
@@ -709,7 +714,7 @@ async function joinRoom(form) {
 }
 async function copyInvite() {
   if (!state.room) return openAccount();
-  const url = new URL(location.href);
+  const url = new URL(location.origin+location.pathname);
   url.searchParams.set("room",state.room.code);
   try { await navigator.clipboard.writeText(url.toString()); notify("Invitation link copied!"); }
   catch (_) { notify("Invite code: "+state.room.code); }
