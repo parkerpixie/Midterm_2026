@@ -585,7 +585,8 @@ function renderAccount() {
       backupControls()+
       '<div class="divider-text">READY TO SYNC BOTH PHONES?</div>'+
       '<button type="button" class="button primary full" data-action="guest-login">🔗 Connect without Google or email</button>'+
-      '<p class="fine-print">A private, anonymous device session will connect you to the shared board. If Supabase says anonymous sign-ins are disabled, turn on <strong>Anonymous Sign-Ins</strong> in Authentication → Providers. Do not sign out or clear browser data.</p>');
+      '<div id="guestConnectMessage" class="guest-connect-message" role="status" aria-live="polite" hidden></div>'+
+      '<p class="fine-print">Uses a private Supabase device session. No Google or email account required. Your phone-only picks remain safe until you import them.</p>');
     return;
   }
   if (!state.room || state.creatingNewRoom || state.pendingInvite) {
@@ -707,24 +708,56 @@ async function importLocalCalls() {
     renderAccount();notify("Imported "+missing.length+" old calls to both phones.");
   }catch(error){fail(error);}
 }
-async function signInGuest() {
-  if (!state.client) return notify("First connect your Supabase project to enable sharing.");
+function guestConnectFeedback(message,isError) {
+  const target=el("guestConnectMessage");
+  if(target){
+    target.hidden=false;
+    target.className="guest-connect-message"+(isError?" error":"");
+    target.textContent=message;
+  }
+}
+async function signInGuest(clickedButton) {
+  const button=clickedButton || document.querySelector('[data-action="guest-login"]');
+  if(button){
+    button.disabled=true;
+    button.textContent="⏳ Connecting your phone…";
+    button.setAttribute("aria-busy","true");
+  }
+  guestConnectFeedback("Checking your private connection. Your existing phone picks are being kept safe.",false);
   try {
+    if (!state.client) {
+      throw new Error("The Supabase connection has not loaded on this phone. Check your connection, then reopen the website and try again.");
+    }
     const {data,error}=await state.client.auth.signInAnonymously();
     if (error) {
-      if (error.code==="anonymous_provider_disabled") throw new Error("Enable Anonymous Sign-Ins in Supabase Authentication first.");
+      if (error.code==="anonymous_provider_disabled") {
+        const mapped=new Error(
+          "Supabase is still rejecting anonymous sign-ins as DISABLED, even if its dashboard switch appears green. On your computer, open Supabase → Authentication → Sign In / Providers, turn Allow anonymous sign-ins OFF and then ON again, and save the setting if prompted. Reopen the app and retry. Your saved picks are untouched."
+        );
+        mapped.code=error.code;
+        throw mapped;
+      }
       throw error;
     }
+    if(!data?.session?.user?.id) throw new Error("Supabase did not return a valid session. Please retry without clearing your phone data.");
     state.session=data.session;
     state.demo=false;
     state.syncError="";
     await bootUser();
     renderAccount();
-    notify("Guest profile ready! Add your nickname to join.");
-  } catch (error) {
-    state.syncError=error.message||"Cannot connect to private board.";
+    notify("Phone connected. Next, create or join the same private board.");
+  } catch(error){
+    const msg=error?.message || "The connection failed. Please try again without clearing your browser data.";
+    state.syncError=msg;
     renderSyncAlert();
-    fail(error);
+    guestConnectFeedback(msg,true);
+    console.error("Anonymous sign-in failed:",error);
+  } finally {
+    if(button && button.isConnected){
+      button.disabled=false;
+      button.textContent="🔗 Retry connection";
+      button.removeAttribute("aria-busy");
+    }
   }
 }
 function clearInviteFromAddress() {
@@ -972,7 +1005,7 @@ function bindEvents() {
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
     }
     if (action==="copy-code") copyInvite();
-    if (action==="guest-login") signInGuest();
+    if (action==="guest-login") { signInGuest(target); return; }
     if (action==="new-room") {
       state.creatingNewRoom=true;state.pendingInvite="";renderAccount();
     }
