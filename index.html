@@ -21,9 +21,19 @@
     </header>
     <div class="marquee" aria-label="Election Day, November 3, 2026"><div class="marquee-track">★ ELECTION NIGHT 2026 ★ PARKER VERSUS BLAKE ★ 35 SENATE RACES ★ 435 HOUSE SEATS ★ MAY THE MOST PRESCIENT HUMAN WIN ★</div></div>
     <main>
-      <section class="hero">
-        <div class="hero-copy"><span class="micro">NOVEMBER 3, 2026 • LIVE FROM THE LIVING ROOM</span><h2>Two predictions.<br><span>One big night.</span></h2><p>Your college spreadsheet got a glow-up. Make your picks, check the calls, and see who can read the electoral tea leaves.</p><div class="hero-actions"><button id="featuredButton" class="button primary" type="button">🎯 See featured races</button><button id="shareButton" class="button outline" type="button">🔗 Share our board</button></div></div>
-        <div class="hero-graphic" aria-hidden="true"><div class="orbit orbit-1"></div><div class="orbit orbit-2"></div><div class="ballot-ball"><div class="ballot-fold">★</div><div class="ballot-line"></div><div class="ballot-line shorter"></div><div class="ballot-tick">✓</div></div><span class="spark s1">✦</span><span class="spark s2">★</span><span class="spark s3">✳</span><div class="graphic-sticker">PICK<br>YOUR<br>WINNERS!</div></div>
+      <section class="hero illustrated-hero" aria-label="Midterms 2026 election night">
+        <div class="hero-banner-wrap">
+          <img class="hero-banner" src="assets/midterms-banner.webp" alt="Midterms 2026 folk-art illustration with a flower-covered blue donkey and red elephant, sunshine, rainbows and American flags." width="1600" height="800" decoding="async" fetchpriority="high" onerror="this.hidden=true">
+          <div class="banner-fallback"><span>★ MIDTERMS 2026 ★</span><small>A very colorful election night</small></div>
+        </div>
+        <div class="hero-caption">
+          <div class="hero-caption-copy">
+            <span class="micro">NOVEMBER 3, 2026 • LIVE FROM THE LIVING ROOM</span>
+            <h2>Two predictions. <span>One big night.</span></h2>
+            <p>Your college spreadsheet got a glow-up. Make your picks, check the calls, and see who can read the electoral tea leaves.</p>
+          </div>
+          <div class="hero-actions"><button id="featuredButton" class="button primary" type="button">🎯 See featured races</button><button id="shareButton" class="button outline" type="button">🔗 Share our board</button></div>
+        </div>
       </section>
       <div id="notice" class="notice" role="status"></div>
       <section class="section-heading"><div><span class="micro">THE BIG PICTURE</span><h3>Chamber control</h3></div><button id="totalsButton" class="text-button" type="button">✎ Update called-seat totals</button></section>
@@ -32,6 +42,17 @@
         <article class="chamber-card"><div class="chamber-top"><span class="chamber-symbol">▦</span><div><span class="micro dark">UNITED STATES</span><h4>HOUSE</h4></div><span class="threshold">218 TO WIN</span></div><div class="seat-readout"><div><span class="party-label dem">DEMOCRATIC</span><strong class="dem-number" id="houseD">—</strong></div><div class="majority-track"><span class="majority-line"></span><div class="bar-fill dem-fill" id="houseDBar"></div><div class="bar-fill rep-fill" id="houseRBar"></div></div><div class="right"><span class="party-label rep">REPUBLICAN</span><strong class="rep-number" id="houseR">—</strong></div></div><p class="chamber-foot" id="houseStatus">Waiting for called-seat totals • 435 seats</p></article>
         <article class="chamber-card"><div class="chamber-top"><span class="chamber-symbol">◉</span><div><span class="micro dark">UNITED STATES</span><h4>SENATE</h4></div><span class="threshold">100 SEATS</span></div><div class="seat-readout"><div><span class="party-label dem">D + CAUCUSING I</span><strong class="dem-number" id="senateD">—</strong></div><div class="majority-track"><span class="majority-line"></span><div class="bar-fill dem-fill" id="senateDBar"></div><div class="bar-fill rep-fill" id="senateRBar"></div></div><div class="right"><span class="party-label rep">REPUBLICAN</span><strong class="rep-number" id="senateR">—</strong></div></div><p class="chamber-foot" id="senateStatus">Waiting for called-seat totals • 50–50 ties go to the vice president</p></article>
       </div>
+      <section class="party-art-section" aria-label="Folk art featuring Democratic and Republican party mascots">
+        <figure class="party-art-card blue-side">
+          <img src="assets/democratic-donkey.webp" alt="A smiling navy-blue donkey with a rainbow scarf, heart, stars, flowers, foliage and a sunny sky." width="720" height="720" loading="lazy" decoding="async" onerror="this.hidden=true">
+          <figcaption><span>✿ THE BLUE SIDE</span><strong>Democratic donkey</strong></figcaption>
+        </figure>
+        <div class="party-art-center" aria-hidden="true">✦</div>
+        <figure class="party-art-card red-side">
+          <img src="assets/republican-elephant.webp" alt="A smiling red elephant decorated with flowers and carrying a star-spangled flag beneath a golden sun." width="720" height="720" loading="lazy" decoding="async" onerror="this.hidden=true">
+          <figcaption><span>✿ THE RED SIDE</span><strong>Republican elephant</strong></figcaption>
+        </figure>
+      </section>
       <section class="section-heading"><div><span class="micro">BRAGGING RIGHTS DEPARTMENT</span><h3>Prediction showdown</h3></div><span class="section-decoration">✳</span></section>
       <div class="player-grid" id="playerGrid"></div>
       <section class="section-heading race-section"><div><span class="micro">THE RACE BOARD</span><h3>Watch the map change</h3></div><span id="raceCount" class="count-bubble">88 races</span></section>
