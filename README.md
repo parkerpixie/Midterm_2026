@@ -12,7 +12,7 @@ A phone-friendly, retro-styled Parker-vs.-Blake 2026 midterm election game. Runs
 - Both players can enter or clear **shared race calls** and **full-chamber seat totals**.
 - Realtime cross-device updates through Supabase Postgres Changes.
 - Automatic points and prediction accuracy based on manually called winners.
-- All **35** Senate elections, with **13** Ballotpedia battlegrounds highlighted.
+- All **35** Senate elections, with **12** Ballotpedia battlegrounds highlighted.
 - **53** competitive House races rated Toss Up, Lean D, or Lean R in Cook's late-October/early-November ratings; **18** House toss-ups appear in Featured.
 - Search, chamber filters, called/open/unpicked filters, animated design, and responsive phone layout.
 - **No automatic results API.** Manual results are not independently verified by the app.
