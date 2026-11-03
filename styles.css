@@ -220,3 +220,31 @@ body{background:linear-gradient(180deg,#fff6df 0%,#f5f5f0 30%,#f4f7f4 100%)}
 }
 .guest-button{border-color:#d9dedb;background:#f3f6f1;color:#29405b}
 .guest-button:hover{background:#e9f2e6}
+
+
+/* Governors: manual call tracker for 36 states, separate from 50-state party control. */
+.governor-summary{
+  margin-top:17px;padding:21px 24px;background:#fffefa;
+  border:1px solid #dbe4df;border-top:5px solid #92b6a4;
+  border-radius:19px;box-shadow:0 8px 24px rgba(21,32,71,.06);
+}
+.governor-header{display:flex;align-items:center;gap:13px}
+.governor-emoji{font-size:29px;background:#eff6ea;width:49px;height:49px;border-radius:13px;display:grid;place-items:center}
+.governor-header h4{font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-.05em;margin:0}
+.governor-header .count-bubble{margin-left:auto}
+.governor-counts{display:flex;flex-wrap:wrap;gap:22px;margin:17px 0 11px;color:#66758a;font-size:13px;font-weight:700}
+.governor-counts span{display:inline-flex;align-items:baseline;gap:7px}
+.governor-counts strong{font-family:'Space Grotesk',sans-serif;font-size:26px}
+.governor-bars{height:13px;width:100%;border-radius:20px;display:flex;background:#edf0f3;overflow:hidden}
+.governor-bars div{height:100%;transition:width .3s;flex:0 0 auto}
+.gov-dem{background:#315fe8}.gov-rep{background:#ef6772}.gov-other{background:#dfa82c}
+.governor-summary p{font-size:11px;color:#7c8799;line-height:1.5;margin:10px 0 0}
+@media(max-width:730px){
+  .governor-summary{padding:18px}
+  .governor-header h4{font-size:20px}
+  .governor-counts{gap:12px;font-size:12px}
+  .governor-counts strong{font-size:24px}
+  .governor-header .count-bubble{font-size:10px;padding:7px 10px}
+  .tabs{justify-content:flex-start}
+  .tab{flex:1 1 auto}
+}
