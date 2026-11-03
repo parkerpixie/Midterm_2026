@@ -165,7 +165,7 @@ with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_i
 -- Invite-only joining, max 2 in duo mode or max 500 in community mode.
 -- The code lookup intentionally bypasses room RLS,
 -- but requires a signed-in user, enforces room-size limits, and returns only room ID.
-create or replace function public.join_midterm_room(p_code text,p_name text)
+create or replace function private.midterm_join_room_internal(p_code text,p_name text)
 returns uuid
 language plpgsql security definer
 set search_path = ''
@@ -201,6 +201,17 @@ begin
     do update set display_name = excluded.display_name;
   return v_room;
 end;
+$$;
+revoke all on function private.midterm_join_room_internal(text,text) from public, anon;
+grant execute on function private.midterm_join_room_internal(text,text) to authenticated;
+
+-- Public RPC is security-invoker. The privileged code lives outside the exposed API schema.
+create or replace function public.join_midterm_room(p_code text,p_name text)
+returns uuid
+language sql security invoker
+set search_path = ''
+as $$
+  select private.midterm_join_room_internal(p_code,p_name);
 $$;
 revoke all on function public.join_midterm_room(text,text) from public, anon;
 grant execute on function public.join_midterm_room(text,text) to authenticated;
