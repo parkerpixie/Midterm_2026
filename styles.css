@@ -196,3 +196,27 @@ body{background:linear-gradient(180deg,#fff6df 0%,#f5f5f0 30%,#f4f7f4 100%)}
  .header-actions .small-btn{font-size:11px}
  .party-art-card img{height:clamp(136px,43vw,175px)}
 }
+
+
+/* Permanent account sign-in via Google */
+.google-button{
+  background:#ffffff;
+  color:#263345;
+  border:2px solid #d6dfe8;
+  box-shadow:0 3px 0 #cdd5dd;
+  gap:12px;
+  font-size:14px;
+  margin:7px 0 10px;
+}
+.google-button:hover{background:#f6f9ff;border-color:#a7bedf}
+.google-mark{
+  display:inline-grid;place-items:center;
+  width:24px;height:24px;flex:0 0 24px;
+  font-family:Arial,sans-serif;
+  font-weight:900;font-size:24px;
+  color:#4285f4;
+  background:#fff;
+  border-radius:50%;
+}
+.guest-button{border-color:#d9dedb;background:#f3f6f1;color:#29405b}
+.guest-button:hover{background:#e9f2e6}
