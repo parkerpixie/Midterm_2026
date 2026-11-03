@@ -83,14 +83,14 @@ create or replace function private.midterm_can_manage(p_room uuid)
 returns boolean
 language sql stable security definer
 set search_path = ''
-as $
+as $$
   select exists (
     select 1 from public.midterm_rooms r
     where r.id=p_room and
      (r.owner_id=(select auth.uid()) or
       (r.mode='duo' and private.midterm_is_member(p_room)))
   );
-$;
+$$;
 revoke all on function private.midterm_can_manage(uuid) from public, anon;
 grant execute on function private.midterm_can_manage(uuid) to authenticated;
 
@@ -162,7 +162,7 @@ with check (updated_by=(select auth.uid()) and private.midterm_can_manage(room_i
 
 -- Invite-only joining, max 2 in duo mode or max 500 in community mode.
 -- The code lookup intentionally bypasses room RLS,
--- but requires a signed-in user, limits seats to two, and returns only room ID.
+-- but requires a signed-in user, enforces room-size limits, and returns only room ID.
 create or replace function public.join_midterm_room(p_code text,p_name text)
 returns uuid
 language plpgsql security definer
@@ -219,7 +219,7 @@ create or replace function public.midterm_leaderboard(p_room uuid)
 returns table(user_id uuid,display_name text,picked bigint,judged bigint,correct bigint)
 language sql stable security invoker
 set search_path = ''
-as $
+as $$
   select m.user_id,m.display_name,
     count(p.candidate_id) filter (where p.candidate_id is not null) as picked,
     count(p.candidate_id) filter
@@ -234,7 +234,7 @@ as $
   where m.room_id=p_room and private.midterm_is_member(p_room)
   group by m.user_id,m.display_name
   order by correct desc,picked desc,m.display_name asc;
-$;
+$$;
 revoke all on function public.midterm_leaderboard(uuid) from public,anon;
 grant execute on function public.midterm_leaderboard(uuid) to authenticated;
 
