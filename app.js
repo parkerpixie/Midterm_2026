@@ -438,13 +438,15 @@ function renderAccount() {
   }
   if (!state.session) {
     accountContent('<span class="micro">YOUR ELECTION NIGHT PREDICTION DESK</span><h3>Join the challenge! 🗳️</h3>'+
-      '<p>The fastest way to play with friends: join as a guest, then choose your nickname. No email or password required.</p>'+
-      '<button type="button" class="button primary full guest-button" data-action="guest-login">🎟️ Join instantly as a guest</button>'+
-      '<p class="fine-print guest-disclaimer">Your guest profile syncs in this challenge but lives on this device. If you sign out or clear browser data, you cannot recover those picks.</p>'+
+      '<p>Use your Google account to keep your predictions and sign in again from another device.</p>'+
+      '<button type="button" class="button google-button full" data-action="google-login"><span class="google-mark" aria-hidden="true">G</span> Continue with Google</button>'+
+      '<div class="divider-text">OR PLAY WITHOUT AN ACCOUNT</div>'+
+      '<button type="button" class="button full guest-button" data-action="guest-login">🎟️ Join instantly as a guest</button>'+
+      '<p class="fine-print guest-disclaimer">Guest profiles sync but cannot be recovered after signing out or clearing browser data.</p>'+
       '<div class="divider-text">OR SIGN IN WITH EMAIL</div>'+
       '<form id="emailForm"><label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>'+
       '<button class="button full" type="submit">Send my sign-in link</button></form>'+
-      '<div class="modal-note">Email sign-ins for people outside the Supabase project team require the host to configure a custom SMTP email service.</div>');
+      '<div class="modal-note">Google sign-in requires the host to enable the Google provider in Supabase. Email sign-ins to other people require custom SMTP.</div>');
     return;
   }
   if (!state.room || state.creatingNewRoom || state.pendingInvite) {
@@ -487,6 +489,18 @@ function renderAccount() {
 }
 
 
+async function signInGoogle() {
+  if (!state.client) return notify("The shared game connection is not ready yet.");
+  try {
+    const redirectTo=location.origin+location.pathname+location.search;
+    const {error}=await state.client.auth.signInWithOAuth({
+      provider:"google",
+      options:{redirectTo:redirectTo}
+    });
+    if (error) throw error;
+    // Supabase redirects the browser to Google and then back to this app.
+  } catch(error) { fail(error); }
+}
 async function signInGuest() {
   if (!state.client) return notify("First connect your Supabase project to enable sharing.");
   try {
@@ -719,6 +733,7 @@ function bindEvents() {
       savePreview();render();renderAccount();notify("Now making picks as "+state.persona);
     }
     if (action==="copy-code") copyInvite();
+    if (action==="google-login") signInGoogle();
     if (action==="guest-login") signInGuest();
     if (action==="new-room") {
       state.creatingNewRoom=true;state.pendingInvite="";renderAccount();
