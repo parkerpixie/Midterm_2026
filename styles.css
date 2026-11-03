@@ -359,3 +359,38 @@ button,select{touch-action:manipulation}
  .manager-candidates{grid-template-columns:1fr 1fr}
  .manager-choice{min-height:48px}
 }
+
+
+/* Top-of-screen phone navigation and explicit sync status */
+.sync-alert{display:flex;align-items:center;gap:13px;background:#fff7dc;border:2px solid #e5c983;border-radius:16px;padding:15px;margin:13px 0 18px;box-shadow:0 3px 14px rgba(39,58,74,.06)}
+.sync-alert.connected{background:#e9f6ed;border-color:#b3d9bb}
+.sync-alert.needs-import{background:#fff0de;border-color:#eac28e}
+.sync-alert-icon{font-size:26px;flex:0 0 30px}
+.sync-alert-body{min-width:0;flex:1}
+.sync-alert-body strong{font-size:14px;color:#233a55}
+.sync-alert-body p{font-size:12px;line-height:1.45;color:#55687c;margin:5px 0 0}
+.sync-alert .button{min-height:44px;padding:11px 14px;white-space:nowrap;font-size:12px}
+@media(max-width:730px){
+  .app-shell{padding-bottom:25px}
+  .mobile-nav{
+    position:sticky!important;top:0!important;bottom:auto!important;
+    left:auto!important;right:auto!important;
+    z-index:90;display:grid;
+    width:calc(100% + 24px);margin:0 -12px;
+    padding:5px 8px 6px;
+    border:0;border-bottom:2px solid #b9c9b7;
+    border-radius:0 0 15px 15px;
+    background:rgba(255,253,243,.97);
+    box-shadow:0 5px 18px rgba(30,53,68,.12);
+  }
+  .mobile-nav button{min-height:47px;font-size:20px}
+  .mobile-nav small{font-size:10px}
+  .manager-wave{top:59px}
+  html{scroll-padding-top:66px}
+  .toast{bottom:18px}
+  .sync-alert{align-items:flex-start;gap:9px;padding:12px;margin:12px 0 15px}
+  .sync-alert-icon{font-size:20px;flex-basis:22px}
+  .sync-alert-body strong{font-size:12px}
+  .sync-alert-body p{font-size:11px}
+  .sync-alert .button{font-size:11px;padding:9px;white-space:normal;min-height:44px}
+}
