@@ -12,7 +12,7 @@ let cachedPreview;
 try { cachedPreview = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch (_) { cachedPreview = null; }
 const state = {
   demo:true, client:null, session:null, room:null, member:null, members:[],
-  picks:[], results:[], totals:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
+  picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
   persona:"Parker", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
@@ -162,7 +162,11 @@ function renderLeaderboard() {
   el("leaderboardIntro").textContent=state.demo
     ? "This is a two-player preview. Connect Supabase and create a Community Challenge for your Facebook friends to join."
     : "Players earn one point per correctly predicted candidate after the host enters a race call. Ties stay tied.";
-  const entries=participants().map(function (p) { return {...p,score:raceScores(p)}; })
+  const entries=(isCommunity?state.leaderboard.map(function (p) {
+    const correct=Number(p.correct)||0,picked=Number(p.picked)||0,judged=Number(p.judged)||0;
+    return {user_id:p.user_id,display_name:p.display_name,
+      score:{correct:correct,picked:picked,judged:judged,accuracy:judged?Math.round(correct/judged*100):null}};
+  }):participants().map(function (p) { return {...p,score:raceScores(p)}; }))
     .sort(function (a,b) {
       return b.score.correct-a.score.correct || b.score.picked-a.score.picked ||
         a.display_name.localeCompare(b.display_name);
@@ -476,7 +480,7 @@ async function signOut() {
   try {
     await state.client.auth.signOut();
     state.session=null; state.room=null; state.member=null; state.members=[];
-    state.picks=[];state.results=[];state.totals=[];
+    state.picks=[];state.results=[];state.totals=[];state.leaderboard=[];
     if (state.channel) { await state.client.removeChannel(state.channel);state.channel=null; }
     render();renderAccount();notify("Signed out");
   } catch (error) { fail(error); }
@@ -487,27 +491,34 @@ async function bootUser() {
   const {data:member,error} = await state.client.from("midterm_members")
     .select("room_id,user_id,display_name").eq("user_id",uid).limit(1).maybeSingle();
   if (error) throw error;
-  if (!member) { state.room=null;state.member=null;state.members=[];state.picks=[];state.results=[];state.totals=[];render();return; }
+  if (!member) { state.room=null;state.member=null;state.members=[];state.picks=[];state.results=[];state.totals=[];state.leaderboard=[];render();return; }
   const response = await state.client.from("midterm_rooms").select("id,code,owner_id,mode").eq("id",member.room_id).single();
   if (response.error) throw response.error;
   state.room=response.data;state.member=member;
   await loadData();
   subscribeToRoom();
 }
+
 async function loadData() {
   if (!state.room || !state.client) {render();return;}
   const roomId=state.room.id;
-  const results=await Promise.all([
+  const community=state.room.mode==="community";
+  let picksQuery=state.client.from("midterm_picks").select("race_id,user_id,party,candidate_id").eq("room_id",roomId);
+  if (community) picksQuery=picksQuery.eq("user_id",currentId());
+  const requests=[
     state.client.from("midterm_members").select("user_id,display_name").eq("room_id",roomId),
-    state.client.from("midterm_picks").select("race_id,user_id,party,candidate_id").eq("room_id",roomId),
+    picksQuery,
     state.client.from("midterm_results").select("race_id,party,candidate_id").eq("room_id",roomId),
     state.client.from("midterm_totals").select("chamber,dem,rep").eq("room_id",roomId)
-  ]);
+  ];
+  if (community) requests.push(state.client.rpc("midterm_leaderboard",{p_room:roomId}));
+  const results=await Promise.all(requests);
   results.forEach(function (response) { if (response.error) throw response.error; });
   state.members=results[0].data||[];
   state.picks=results[1].data||[];
   state.results=results[2].data||[];
   state.totals=results[3].data||[];
+  state.leaderboard=community?(results[4].data||[]):[];
   render();
 }
 function subscribeToRoom() {
