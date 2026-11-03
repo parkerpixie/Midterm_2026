@@ -49,7 +49,7 @@ function allTotals() { return state.demo ? state.preview.totals : state.totals; 
 function participants() {
   return state.demo
     ? [{user_id:"Parker",display_name:"Parker"}, {user_id:"Blake",display_name:"Blake"}]
-    : state.members;
+    : state.members.slice().sort(function(a,b){return a.display_name==="Parker"?-1:b.display_name==="Parker"?1:a.display_name.localeCompare(b.display_name);});
 }
 
 function candidatesFor(raceId) { return CANDIDATES[raceId] || []; }
@@ -488,80 +488,71 @@ function openAccount() {
 }
 function accountContent(markup) { el("accountContent").innerHTML = '<div class="modal-body">'+markup+'</div>'; }
 
+function backupControls() {
+  const pv=state.preview||{};
+  const n=(pv.picks||[]).length, calls=(pv.results||[]).length;
+  return '<div class="backup-panel"><span class="micro">YOUR ORIGINAL PHONE-ONLY SAVE</span>'+
+    '<h4>💾 Safe and untouched</h4><p>'+n+' stored predictions • '+calls+' saved race calls. Your original save is never automatically deleted or replaced.</p>'+
+    '<button type="button" class="button full backup-button" data-action="backup-local">⬇ Download a backup of this phone</button>'+
+    '<button type="button" class="link-button" data-action="copy-backup">Copy backup text instead</button></div>';
+}
+function importControls() {
+  const chosen=state.member?.display_name||"";
+  const count=(state.preview.picks||[]).filter(function(p){
+    return p.user_id.toLowerCase()===chosen.toLowerCase();
+  }).length;
+  const extra=(state.preview.results||[]).length;
+  return '<div class="import-panel"><span class="micro">BRING YOUR EXISTING PICKS INTO THE SHARED BOARD</span>'+
+    '<h4>📲 '+escapeHtml(chosen)+'’s saved predictions</h4>'+
+    '<p>Found '+count+' original picks for '+escapeHtml(chosen)+' on this phone. Import adds only missing, uncalled predictions. It never overwrites shared picks or erases the phone copy.</p>'+
+    '<button type="button" class="button primary full" data-action="import-local">Import '+escapeHtml(chosen)+'’s '+count+' saved picks</button>'+
+    (extra?'<p class="fine-print">This phone also has '+extra+' locally saved winner calls. Wait until both players import their picks before transferring calls.</p>'+
+      '<button type="button" class="link-button" data-action="import-calls">Import missing saved calls after both phones finish</button>':'')+
+    '</div>';
+}
 function renderAccount() {
   if (state.demo) {
-    accountContent('<span class="micro">PREVIEW DESK</span><h3>Who is making picks?</h3>'+
-      '<p>Try both players here. Candidate predictions save in this browser only, until Supabase is connected.</p>'+
-      '<div class="input-pair"><button type="button" data-action="persona" data-persona="Parker" class="button full '+(state.persona==='Parker'?'primary':'')+'">🔮 Parker</button>'+
-      '<button type="button" data-action="persona" data-persona="Blake" class="button full '+(state.persona==='Blake'?'primary':'')+'">🦊 Blake</button></div>'+
-      '<div class="modal-note">To invite Facebook friends and activate the community leaderboard, configure a Supabase project with the new <strong>schema.sql</strong> and <strong>config.js</strong>. The published app is currently a local preview.</div>');
-    return;
-  }
-  if (!state.session) {
-    accountContent('<span class="micro">YOUR ELECTION NIGHT PREDICTION DESK</span><h3>Join the challenge! 🗳️</h3>'+
-      '<p>Use your Google account to keep your predictions and sign in again from another device.</p>'+
-      '<button type="button" class="button google-button full" data-action="google-login"><span class="google-mark" aria-hidden="true">G</span> Continue with Google</button>'+
-      '<div class="divider-text">OR PLAY WITHOUT AN ACCOUNT</div>'+
-      '<button type="button" class="button full guest-button" data-action="guest-login">🎟️ Join instantly as a guest</button>'+
-      '<p class="fine-print guest-disclaimer">Guest profiles sync but cannot be recovered after signing out or clearing browser data.</p>'+
-      '<div class="divider-text">OR SIGN IN WITH EMAIL</div>'+
-      '<form id="emailForm"><label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>'+
-      '<button class="button full" type="submit">Send my sign-in link</button></form>'+
-      '<div class="modal-note">Google sign-in requires the host to enable the Google provider in Supabase. Email sign-ins to other people require custom SMTP.</div>');
+    const count=(state.preview.picks||[]).filter(function(p){return p.user_id===state.persona;}).length;
+    accountContent('<span class="micro">PARKER + BLAKE</span><h3>Connect our two phones 📱</h3>'+
+      '<p>Your current phone-only predictions are safe. You have '+count+' picks as '+escapeHtml(state.persona)+'. You can keep using this phone without connecting, or set up a private board.</p>'+
+      '<div class="input-pair"><button type="button" data-action="persona" data-persona="Parker" class="button full '+(state.persona==="Parker"?"primary":"")+'">🔮 Parker</button>'+
+      '<button type="button" data-action="persona" data-persona="Blake" class="button full '+(state.persona==="Blake"?"primary":"")+'">🦊 Blake</button></div>'+
+      backupControls()+
+      '<div class="divider-text">READY TO SYNC BOTH PHONES?</div>'+
+      '<button type="button" class="button primary full" data-action="guest-login">🔗 Connect without Google or email</button>'+
+      '<p class="fine-print">A private, anonymous device session will connect you to the shared board. If Supabase says anonymous sign-ins are disabled, turn on <strong>Anonymous Sign-Ins</strong> in Authentication → Providers. Do not sign out or clear browser data.</p>');
     return;
   }
   if (!state.room || state.creatingNewRoom || state.pendingInvite) {
     const urlRoom=state.pendingInvite||new URLSearchParams(location.search).get("room")||"";
-    accountContent('<span class="micro">WELCOME TO THE BOARD</span><h3>Start or join a challenge</h3>'+
-      '<p>Make a private two-person game, or a Community Challenge you can share on Facebook.</p>'+
-      '<form id="createRoomForm"><label>Your display name<input name="display_name" maxlength="30" placeholder="Parker" required></label>'+
-      '<label>Challenge type<select name="mode" class="mode-select"><option value="duo">Private game (2 players)</option>'+
-      '<option value="community">Community Challenge (share with friends)</option></select></label>'+
-      '<button type="submit" class="button primary full">✦ Create challenge</button></form>'+
-      '<div class="divider-text">OR JOIN SOMEONE ELSE</div>'+
+    accountContent('<span class="micro">NO GOOGLE ACCOUNT REQUIRED</span><h3>One private game for both of you</h3>'+
+      '<p>One of you creates the board; the other enters its code. Choose the correct name so your previously saved picks can be imported.</p>'+
+      '<form id="createRoomForm"><label>Who is creating this board?<select name="display_name" required>'+
+      '<option value="Parker"'+(state.persona==="Parker"?" selected":"")+'>🔮 Parker</option>'+
+      '<option value="Blake"'+(state.persona==="Blake"?" selected":"")+'>🦊 Blake</option></select></label>'+
+      '<button type="submit" class="button primary full">✦ Create our two-person board</button></form>'+
+      '<div class="divider-text">OR JOIN THE EXISTING BOARD</div>'+
       '<form id="joinRoomForm"><label>Invitation code<input name="code" value="'+escapeHtml(urlRoom)+'" maxlength="10" placeholder="10-character code" required autocapitalize="characters"></label>'+
-      '<label>Your display name<input name="display_name" maxlength="30" placeholder="Your leaderboard name" required></label>'+
-      '<button type="submit" class="button primary full">Join challenge</button></form>'+
-      (state.room?'<button type="button" class="link-button" data-action="cancel-new-room">Back to my challenge</button>':'')+
-      '<button type="button" class="link-button" data-action="signout">Sign out</button>');
+      '<label>Who is joining?<select name="display_name" required>'+
+      '<option value="Blake"'+(state.persona==="Blake"?" selected":"")+'>🦊 Blake</option>'+
+      '<option value="Parker"'+(state.persona==="Parker"?" selected":"")+'>🔮 Parker</option></select></label>'+
+      '<button type="submit" class="button primary full">Join the same board</button></form>'+
+      (state.room?'<button type="button" class="link-button" data-action="cancel-new-room">Return to our board</button>':'')+
+      backupControls()+
+      '<p class="fine-print">Don’t sign out of this device: anonymous sessions cannot be recovered after browser data is cleared.</p>');
     return;
   }
-  const code=escapeHtml(state.room.code),community=state.room.mode==="community";
-  const members=participants().slice(0,5).map(function (m) {
-    return '<span class="member-chip">✦ '+escapeHtml(m.display_name)+'</span>';
-  }).join("");
-  accountContent('<span class="micro">'+(community?'COMMUNITY CHALLENGE':'YOUR TWO-PLAYER GAME')+'</span>'+
-    '<h3>'+ (community?'The public prediction party 🎉':'Your shared election night 🎉')+'</h3>'+
-    '<p>'+ (community?'Share this link anywhere. Friends sign in, create a display name, and appear on the leaderboard. Only the host can enter called winners.':
-    'Both phones see the same results, while each player controls their own predictions.')+'</p>'+
-    '<div>'+members+(state.members.length>5?' <span class="member-chip">+'+(state.members.length-5)+' more</span>':'')+'</div>'+
-    '<div class="mini-label" style="margin-top:18px">INVITE CODE</div><div class="invite-code">'+code+'</div>'+
-    '<button type="button" data-action="copy-code" class="button primary full">Copy invitation link</button>'+
-    '<div class="modal-note">Each person uses their own email address and picks their own display name. Your friends will share only this challenge, not your private boards.</div>'+
-    (state.session?.user?.is_anonymous?'<div class="modal-note">Guest profile: don\'t sign out or clear this browser’s data, or you could lose access to your predictions.</div>':'')+
-    '<div class="room-switcher"><div class="mini-label">MY CHALLENGES</div>'+state.roomList.map(function (room) {
-      const chosen=room.id===state.room.id;
-      return '<button type="button" class="room-switch'+(chosen?' current':'')+
-        '" data-action="switch-room" data-room="'+escapeHtml(room.id)+'">'+
-        (room.mode==="community"?'🌎 Community':'👥 Private')+' · '+escapeHtml(room.code)+(chosen?' ✓':'')+'</button>';
-    }).join("")+'</div>'+
-    '<button type="button" class="link-button" data-action="new-room">＋ Create or join another challenge</button>'+
-    '<button type="button" class="link-button" data-action="signout">Sign out</button>');
+  const people=participants().map(function(m){return '<span class="member-chip">'+escapeHtml(m.display_name)+'</span>';}).join("");
+  accountContent('<span class="micro">OUR SHARED TWO-PERSON BOARD</span><h3>Connected for election night 🎉</h3>'+
+    '<p>Shared calls and your picks sync between phones. Each person can see both scores.</p>'+
+    '<div class="member-list">'+people+'</div>'+
+    '<div class="mini-label" style="margin-top:18px">OUR INVITE CODE</div><div class="invite-code">'+escapeHtml(state.room.code)+'</div>'+
+    '<button type="button" data-action="copy-code" class="button primary full">🔗 Copy link for the other phone</button>'+
+    '<p class="fine-print">The invitation grants access to this private game. Share it only with Blake or Parker.</p>'+
+    importControls()+backupControls()+
+    '<p class="fine-print">Your connection is stored on this device. Please avoid signing out or clearing the website’s storage, especially during election night.</p>');
 }
 
-
-async function signInGoogle() {
-  if (!state.client) return notify("The shared game connection is not ready yet.");
-  try {
-    const redirectTo=location.origin+location.pathname+location.search;
-    const {error}=await state.client.auth.signInWithOAuth({
-      provider:"google",
-      options:{redirectTo:redirectTo}
-    });
-    if (error) throw error;
-    // Supabase redirects the browser to Google and then back to this app.
-  } catch(error) { fail(error); }
-}
 async function signInGuest() {
   if (!state.client) return notify("First connect your Supabase project to enable sharing.");
   try {
@@ -571,6 +562,7 @@ async function signInGuest() {
       throw error;
     }
     state.session=data.session;
+    state.demo=false;
     await bootUser();
     renderAccount();
     notify("Guest profile ready! Add your nickname to join.");
@@ -588,18 +580,10 @@ function clearInviteFromAddress() {
     } catch (_) {}
   }
 }
-async function sendEmail(form) {
-  const email = form.elements.email.value.trim();
-  const redirect = location.origin + location.pathname + location.search;
-  const {error} = await state.client.auth.signInWithOtp({email:email,options:{emailRedirectTo:redirect}});
-  if (error) throw error;
-  notify("Check your inbox for the sign-in link ✉️");
-  form.innerHTML = '<p class="modal-note">Sign-in link sent to '+escapeHtml(email)+'. Open the email on this device to sign in.</p>';
-}
 async function createRoom(form) {
   if (!state.session) throw new Error("Sign in before creating a board.");
   const name = form.elements.display_name.value.trim();
-  const mode = form.elements.mode.value==="community"?"community":"duo";
+  const mode = "duo";
   if (!name || name.length>30) throw new Error("Please use a name between 1 and 30 characters.");
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const random = new Uint8Array(10);
@@ -617,7 +601,8 @@ async function createRoom(form) {
   state.pendingInvite="";
   await bootUser();
   el("accountDialog").close();
-  notify("Your new challenge is ready! Share its code ✨");
+  notify("Our private board is ready! Send the invite code to the other phone 📱");
+  openAccount();
 }
 async function joinRoom(form) {
   if (!state.session) throw new Error("Sign in before joining.");
@@ -634,7 +619,8 @@ async function joinRoom(form) {
   if (joined.data) state.preferredRoomId=joined.data.id;
   await bootUser();
   el("accountDialog").close();
-  notify("You're in! Your picks now sync 🎉");
+  notify("Connected! Now import saved picks from this phone 📲");
+  openAccount();
 }
 async function copyInvite() {
   if (!state.room) return openAccount();
@@ -728,21 +714,23 @@ async function initializeCloud() {
   const cfg=window.MIDTERM_CONFIG || {};
   if (!cfg.supabaseUrl || !cfg.publishableKey) {state.demo=true;render();return;}
   try {
-    const sdk = await import("https://esm.sh/@supabase/supabase-js@2.49.4");
+    const sdk=await import("https://esm.sh/@supabase/supabase-js@2.49.4");
     state.client=sdk.createClient(cfg.supabaseUrl,cfg.publishableKey);
-    state.demo=false;
-    state.client.auth.onAuthStateChange(function (_event,session) {
+    state.client.auth.onAuthStateChange(function(_event,session){
       state.session=session;
-      setTimeout(function () { bootUser().catch(fail); },0);
+      state.demo=!session;
+      setTimeout(function(){bootUser().catch(fail);},0);
     });
     const {data,error}=await state.client.auth.getSession();
-    if (error) throw error;
+    if(error) throw error;
     state.session=data.session;
-    await bootUser();
-  } catch (error) {
-    state.demo=false;
-    console.error("Could not initialize Supabase",error);
-    notify("Cloud connection unavailable. Check config.js and your network.");
+    state.demo=!data.session; // No account yet: KEEP using original phone-only picks.
+    if(data.session)await bootUser();
+    else render();
+  }catch(error){
+    state.demo=true; // Network/auth failure should never hide local saved predictions.
+    console.error("Cloud connection unavailable",error);
+    notify("Offline phone picks still available. Try syncing again when connected.");
     render();
   }
 }
