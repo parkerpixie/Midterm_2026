@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#152047">
-  <meta name="description" content="The Ballot Board: make midterm election predictions with friends and join a community leaderboard.">
+  <meta name="description" content="The Ballot Board: Parker and Blake’s private election-night prediction board, synced picks and a poll-close manager.">
   <title>The Ballot Board '26 | Election Night Predictions</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -13,6 +13,7 @@
   <script src="candidates.js" defer></script>
   <script src="incumbents.js" defer></script>
   <script src="governors.js" defer></script>
+  <script src="poll-times.js" defer></script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -21,10 +22,10 @@
     <header class="site-header">
       <div class="brand"><div class="brand-icon" aria-hidden="true">★</div><div><span class="eyebrow">A VERY CIVIC HOUSEHOLD COMPETITION</span><h1>THE BALLOT <em>BOARD</em><sup>'26</sup></h1></div></div>
       <div class="header-actions"><span id="connectionStatus" class="status-pill">◌ Preview mode</span>
-      <button class="small-btn leaderboard-nav" id="leaderboardButton" type="button">🏆 Leaderboard</button>
-      <button class="small-btn" id="accountButton" type="button">👤 Join / Profile</button></div>
+      <button class="small-btn leaderboard-nav" id="leaderboardButton" type="button">🏆 Scores</button>
+      <button class="small-btn" id="accountButton" type="button">👥 Our phones</button></div>
     </header>
-    <div class="marquee" aria-label="Election Day, November 3, 2026"><div class="marquee-track">★ ELECTION NIGHT 2026 ★ PARKER VS BLAKE VS EVERYBODY ★ 35 SENATE RACES ★ 435 HOUSE SEATS ★ MAY THE MOST PRESCIENT HUMAN WIN ★</div></div>
+    <div class="marquee" aria-label="Election Day, November 3, 2026"><div class="marquee-track">★ ELECTION NIGHT 2026 ★ PARKER VS BLAKE ★ 35 SENATE RACES ★ 435 HOUSE SEATS ★ MAY THE MOST PRESCIENT HUMAN WIN ★</div></div>
     <main>
       <section class="hero illustrated-hero" aria-label="Midterms 2026 election night">
         <div class="hero-banner-wrap">
@@ -37,20 +38,21 @@
             <h2>Two predictions. <span>One big night.</span></h2>
             <p>Your college spreadsheet got a glow-up. Make your picks, check the calls, and see who can read the electoral tea leaves.</p>
           </div>
-          <div class="hero-actions"><button id="featuredButton" class="button primary" type="button">🎯 See featured races</button><button id="shareButton" class="button outline" type="button">🔗 Share our board</button></div>
+          <div class="hero-actions"><button id="featuredButton" class="button primary" type="button">🎯 See featured races</button><button id="shareButton" class="button outline" type="button">📱 Sync both phones</button></div>
         </div>
       </section>
       <div id="notice" class="notice" role="status"></div>
-      <section class="community-guide" id="communityGuide" aria-label="How to join the election prediction challenge">
-        <div class="community-guide-top"><span class="micro">INVITE YOUR FRIENDS</span><h3>Everybody gets a prediction desk. ✨</h3><p id="communityGuideIntro">Create a community challenge, share the link on Facebook, and watch the leaderboard grow.</p></div>
+      <section class="community-guide couple-guide" id="communityGuide" aria-label="Keep Parker and Blake in sync">
+        <div class="community-guide-top"><span class="micro">JUST THE TWO OF US</span><h3>One board. Two phones. 📱</h3>
+          <p id="communityGuideIntro">Your saved picks are safe on this phone. Connect both phones to the same private board to compare scores.</p></div>
         <div class="guide-steps">
-          <div><span class="step-number">1</span><strong>Create or join</strong><small>Open Join / Profile and create a Community Challenge, or follow a friend's invite.</small></div>
-          <div><span class="step-number">2</span><strong>Pick your winners</strong><small>Choose candidates by name, then track how many races you've completed.</small></div>
-          <div><span class="step-number">3</span><strong>Watch the leaderboard</strong><small>Correct predictions earn points after the host enters verified race calls.</small></div>
+          <div><span class="step-number">1</span><strong>Keep your picks</strong><small>Local predictions stay on your phone until you choose to import them.</small></div>
+          <div><span class="step-number">2</span><strong>Connect phones</strong><small>Parker creates a private board; Blake joins with the code.</small></div>
+          <div><span class="step-number">3</span><strong>Manage the calls</strong><small>Update winners by poll-closing time and compare your scores.</small></div>
         </div>
         <div class="guide-actions">
-          <button type="button" id="communityStartButton" class="button primary">👤 Create / join a challenge</button>
-          <button type="button" id="communityLeaderboardButton" class="button outline-light">🏆 See leaderboard</button>
+          <button type="button" id="communityStartButton" class="button primary">📱 Connect / back up picks</button>
+          <button type="button" id="communityLeaderboardButton" class="button outline-light">🏆 See our scores</button>
         </div>
       </section>
       <section class="section-heading"><div><span class="micro">THE BIG PICTURE</span><h3>Chamber control</h3></div><button id="totalsButton" class="text-button" type="button">✎ Update called-seat totals</button></section>
@@ -96,13 +98,28 @@
         <p class="fine-print">Progress counts the 124 tracked races in this app, not all 435 House districts nationwide.</p>
       </section>
       <section class="section-heading race-section"><div><span class="micro">THE RACE BOARD</span><h3>Watch the map change</h3></div><span id="raceCount" class="count-bubble">124 races</span></section>
-      <div class="race-controls"><div class="tabs" role="tablist" aria-label="Race filters"><button class="tab selected" data-view="featured" type="button">★ Featured</button><button class="tab" data-view="senate" type="button">Senate</button><button class="tab" data-view="house" type="button">House</button><button class="tab" data-view="governor" type="button">Governors</button><button class="tab" data-view="all" type="button">All tracked</button></div><div class="filter-row"><label class="search-label"><span aria-hidden="true">⌕</span><input id="raceSearch" type="search" placeholder="Search a candidate or district…" aria-label="Search races or candidates"></label><select id="stateFilter" aria-label="Filter by state"><option value="all">All states</option><option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option><option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option><option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option></select><select id="raceFilter" aria-label="Filter by race status"><option value="all">Any status</option><option value="open">Not called</option><option value="called">Called</option><option value="unpicked">My unfinished picks</option></select></div></div>
+      <div class="race-controls"><div class="tabs" role="tablist" aria-label="Race filters"><button class="tab selected" data-view="featured" type="button">★ Featured</button><button class="tab" data-view="senate" type="button">Senate</button><button class="tab" data-view="house" type="button">House</button><button class="tab" data-view="governor" type="button">Governors</button><button class="tab" data-view="all" type="button">All tracked</button><button class="tab manager-tab" data-view="manager" type="button">📋 Manager</button></div><div class="filter-row"><label class="search-label"><span aria-hidden="true">⌕</span><input id="raceSearch" type="search" placeholder="Search a candidate or district…" aria-label="Search races or candidates"></label><select id="stateFilter" aria-label="Filter by state"><option value="all">All states</option><option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option><option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option><option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option></select><select id="raceFilter" aria-label="Filter by race status"><option value="all">Any status</option><option value="open">Not called</option><option value="called">Called</option><option value="unpicked">My unfinished picks</option></select></div></div>
       <div class="board-meta"><span><span class="dot blue-dot"></span> Democratic</span><span><span class="dot red-dot"></span> Republican</span><span><span class="dot gold-dot"></span> Other / independent</span><span>Race calls entered manually, not automatically verified</span></div>
       <p class="fine-print">Candidate rosters and incumbency are compiled snapshots, not live updates. An incumbent may be retiring or absent from the ballot. Verify state election records for late changes.</p>
       <div id="raceGrid" class="race-grid"></div>
+      <section id="managerPanel" class="manager-panel" hidden aria-label="Election night result manager">
+        <div class="manager-head"><span class="micro">ELECTION-NIGHT CONTROL DESK</span><h3>📋 Call the races</h3>
+          <p>Ordered by when the <strong>last polls close</strong>, shown in Central Standard Time. Pick the winner when the race is reliably called; polling close does not mean a winner has been declared. Both Parker and Blake can enter calls on a private shared board.</p>
+          <p class="fine-print">Source: <a href="https://www.270towin.com/poll-closing-times/" target="_blank" rel="noopener">270toWin 2026 poll closing times</a>. Districts crossing time zones are ordered by their final closing time.</p>
+          <div class="manager-tools"><label>Show <select id="managerFilter" aria-label="Manager race status"><option value="open">⏳ Uncalled races</option><option value="all">All races</option><option value="called">✓ Called races</option></select></label>
+          <span class="count-bubble" id="managerCount">0 of 124 called</span></div>
+        </div>
+        <div id="managerList" class="manager-list"></div>
+      </section>
       <footer><span>✦ THE BALLOT BOARD '26 ✦</span><p>An unofficial election prediction game for friends and family, with House, Senate and governors' races and a shared leaderboard.</p><p>Race lists: <a href="https://ballotpedia.org/U.S._Senate_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia Senate</a>, <a href="https://ballotpedia.org/Gubernatorial_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia Governors</a> and <a href="https://www.cookpolitical.com/ratings/house-race-ratings" target="_blank" rel="noopener">Cook Political Report</a>. Race calls are entered by players and not independently verified.</p><p><a href="/privacy">Privacy Policy</a> · <a href="https://github.com/parkerpixie/Midterm_2026/issues/new" target="_blank" rel="noopener">Contact / Support</a></p></footer>
     </main>
   </div>
+  <nav id="mobileNav" class="mobile-nav" aria-label="Quick navigation">
+    <button type="button" data-action="mobile-picks"><span aria-hidden="true">✍️</span><small>My picks</small></button>
+    <button type="button" data-action="mobile-scores"><span aria-hidden="true">🏆</span><small>Scores</small></button>
+    <button type="button" data-action="mobile-manager"><span aria-hidden="true">📋</span><small>Manager</small></button>
+    <button type="button" data-action="mobile-sync"><span aria-hidden="true">📱</span><small>Sync</small></button>
+  </nav>
   <dialog id="accountDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div id="accountContent"></div></dialog>
   <dialog id="totalsDialog" class="modal"><form method="dialog"><button class="modal-close" aria-label="Close dialog">×</button></form><div class="modal-body"><span class="micro">MANUAL RESULTS DESK</span><h3>Update chamber totals</h3><p>Enter totals only when you're comfortable with the source. House counts represent winners called across all districts. For the Senate, count independents who caucus with Democrats in the D + I column.</p><form id="totalsForm"><div class="total-input-heading">HOUSE <small>435 seats total</small></div><div class="input-pair"><label>D seats called<input name="houseD" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label><label>R seats called<input name="houseR" type="number" min="0" max="435" inputmode="numeric" placeholder="0"></label></div><div class="total-input-heading">SENATE <small>100 seats total, including seats not on the ballot</small></div><div class="input-pair"><label>D + caucusing I seats<input name="senateD" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label><label>R seats<input name="senateR" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label></div><button class="button primary full" type="submit">Save shared totals</button></form></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
