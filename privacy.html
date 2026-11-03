@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Privacy Policy for The Ballot Board '26, an election prediction game with Google sign-in, shared predictions and community leaderboards.">
+  <meta name="description" content="Privacy Policy for The Ballot Board '26, an election prediction game with private device sign-in, shared predictions and a two-person leaderboard.">
   <meta name="theme-color" content="#fff7e5">
   <title>Privacy Policy | The Ballot Board '26</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -31,12 +31,12 @@
   <span class="eyebrow">Your data, your election-night game</span>
   <h1>Privacy Policy</h1>
   <p class="updated">Effective November 3, 2026 • Last updated November 3, 2026</p>
-  <p>The Ballot Board ’26 (“the app,” “we,” or “us”) is an independent, unofficial election prediction game that lets friends select candidates in 2026 U.S. elections, join shared challenges, and compare results on a leaderboard. It is not operated or endorsed by any government, election office, political party, or Google.</p>
-  <div class="notice"><strong>In brief:</strong> We use account information to sign you in, the display name you choose to identify you in a challenge, and your candidate predictions to calculate scores. We do not sell your personal information or use your Google account to read email, contacts, files, or calendar data.</div>
+  <p>The Ballot Board ’26 (“the app,” “we,” or “us”) is an independent, unofficial election prediction game that lets friends select candidates in 2026 U.S. elections, share a private challenge, and compare results on a leaderboard. It is not operated or endorsed by any government, election office, political party, or Google.</p>
+  <div class="notice"><strong>In brief:</strong> We use account information to sign you in, the display name you choose to identify you in a challenge, and your candidate predictions to calculate scores. We do not sell your personal information and do not request access to Google account data.</div>
 
   <h2>1. Information collected</h2>
   <ul>
-    <li><strong>Account and authentication:</strong> If you choose Google sign-in, Google and our authentication provider, Supabase, process the account identity needed to sign you in, which may include your Google account identifier, name, email address and profile photo. The app uses your authenticated user ID to associate you with your predictions. We do not intentionally publish your email address on leaderboards.</li>
+    <li><strong>Account and authentication:</strong> New players connect using an anonymous Supabase Auth session, identified by a randomly assigned account ID. The app does not ask new players for a Google or email login. Earlier test accounts created through Google or email may retain their original authentication identifiers inside Supabase until those accounts are removed. We do not intentionally publish account email addresses on leaderboards.</li>
     <li><strong>Guest sign-in:</strong> If you enter as a guest, Supabase creates an anonymous account identifier. It is kept in your browser session and may be lost if you sign out, clear browser storage or switch devices.</li>
     <li><strong>Your game activity:</strong> We store the nickname you choose, which challenges you have joined, your candidate selections, timestamps associated with saved records, and game results and scores. A challenge invitation code associates members with the same game.</li>
     <li><strong>Technical information:</strong> Supabase and our web host, Netlify, may automatically process standard service information, such as IP address, browser details, diagnostic information and request logs, to operate and protect the service.</li>
@@ -44,21 +44,21 @@
 
   <h2>2. How information is used</h2>
   <p>We use your information to authenticate your account, let you return to your profile, save your picks, keep challenges synchronized between devices, prevent users from modifying one another’s selections, calculate leaderboard rankings, display election-night results entered by the challenge host, and maintain security and reliability.</p>
-  <p>If you choose Google sign-in, we request only basic sign-in identity information (the <code>openid</code>, <code>email</code> and <code>profile</code> scopes). We do not request access to Gmail, Google Drive, contacts, or other Google account content.</p>
+  <p>New connections are anonymous and do not request Google account scopes or access to Gmail, Google Drive, contacts, or other Google account content.</p>
 
   <h2>3. What other players can see</h2>
   <p>People in the same challenge can see participant display names, shared race results, and leaderboard statistics such as points, accuracy and number of completed predictions. Depending on the challenge type, fellow members may also have access to your predictions; do not treat them as private secret ballots. Your email address is not intentionally included in these game displays.</p>
   <p>The organizer of a Community Challenge can enter or correct called winners. Those calls are entered manually, are not official election results, and may change as the host updates them.</p>
 
   <h2>4. Where information is stored and shared</h2>
-  <p>The app is hosted by <a href="https://www.netlify.com/privacy/" target="_blank" rel="noopener">Netlify</a> and uses <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a> for authentication, database storage and updates between devices. Google sign-in is provided through <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a>. These service providers process information to deliver their respective services. We do not sell personal data to advertisers or use Google sign-in information for targeted advertising.</p>
+  <p>The app is hosted by <a href="https://www.netlify.com/privacy/" target="_blank" rel="noopener">Netlify</a> and uses <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a> for authentication, database storage and updates between devices. These service providers process information to deliver their respective services. We do not sell personal data to advertisers or use Google sign-in information for targeted advertising.</p>
   <p>Links to external race-information websites are optional; if you open them, those sites apply their own privacy practices.</p>
 
   <h2>5. Browser storage and account security</h2>
   <p>Supabase Auth stores session information in your browser so you can stay signed in. The site also uses local browser storage for a selected challenge and, in demonstration mode, locally saved predictions. Clearing site data may sign you out and permanently remove access to a guest account. Do not share invitation links with people you do not want in your challenge.</p>
 
   <h2>6. Retention, access and deletion</h2>
-  <p>Account, profile and game records may remain in our database while a challenge or the service operates. We do not currently provide an automatic in-app account deletion button. To request access, correction, or removal of your stored game data, contact the project maintainer through the <a href="https://github.com/parkerpixie/Midterm_2026/issues/new" target="_blank" rel="noopener">Ballot Board support / privacy request page</a>. Please do not post your email address or other sensitive details in a public issue; first ask the maintainer to arrange a private communication channel. Some information may be kept when required for security, legal, or operational reasons.</p>
+  <p>Original phone-only predictions stay in the storage of the browser where you made them until you choose to import them. A local backup download lets you keep a copy. Account, profile and game records may remain in our database while a challenge or the service operates. We do not currently provide an automatic in-app account deletion button. To request access, correction, or removal of your stored game data, contact the project maintainer through the <a href="https://github.com/parkerpixie/Midterm_2026/issues/new" target="_blank" rel="noopener">Ballot Board support / privacy request page</a>. Please do not post your email address or other sensitive details in a public issue; first ask the maintainer to arrange a private communication channel. Some information may be kept when required for security, legal, or operational reasons.</p>
 
   <h2>7. Children</h2>
   <p>The game is intended for a general adult audience and is not designed to collect information from children under 13. If you believe a child under 13 provided information, please contact the project maintainer using the support link above.</p>
