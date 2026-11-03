@@ -1,5 +1,21 @@
 # ✦ The Ballot Board '26
 
+## Governors + Google privacy verification (November 3 update)
+
+**36 gubernatorial elections** now appear in the **Governors** tab, including all nine [Ballotpedia battlegrounds](https://ballotpedia.org/Gubernatorial_battlegrounds,_2026) (AK, AZ, GA, IA, KS, MI, NV, OH, WI). Candidates and current incumbent governors are loaded from `governors.js`. Alaska includes all four round-one choices listed by Ballotpedia. This brings the board to **124 tracked races**. All existing scoring, state filters and completion tracking now include governors.
+
+The governor results counter summarizes **manually entered calls in these 36 elections**, not the national partisan balance of 50 governorships. It should not be used as a verified election-results feed.
+
+To address Google's OAuth consent-screen verification errors:
+
+- The public **[Privacy Policy](https://votemidterms2026.netlify.app/privacy)** is now served via `privacy.html` and the `_redirects` rule for the exact `/privacy` path, and linked from the homepage footer.
+- In Google Cloud Branding, use `https://votemidterms2026.netlify.app/` as the homepage and `https://votemidterms2026.netlify.app/privacy` as the privacy policy URL.
+- Verify ownership of `https://votemidterms2026.netlify.app/` using a **URL-prefix** property in [Google Search Console](https://search.google.com/search-console). Select **HTML tag** verification; add the exact, user-specific `google-site-verification` meta tag within the homepage `<head>` and redeploy, then click Verify. Do not invent a verification token.
+- Google's verification review may take time, and shared hosting domains sometimes require additional proof or a custom domain. The OAuth client must still be configured in Google Cloud, with the client credentials entered in Supabase only.
+
+The policy describes which personal data are processed by Supabase, Google and Netlify. Update the support contact method if you want users to contact you privately rather than through the project issue tracker.
+
+
 **Two prediction desks. One shared election-night scoreboard.**
 
 A phone-friendly, retro-styled Parker-vs.-Blake 2026 midterm election game. Runs as a static website (no build command, no App Store). The interface works in **local preview** instantly, and switches to **two-account live sync** after Supabase is configured.
