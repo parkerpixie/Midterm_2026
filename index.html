@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="config.js" defer></script>
   <script src="races.js" defer></script>
+  <script src="candidates.js" defer></script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -53,11 +54,24 @@
           <figcaption><span>✿ THE RED SIDE</span><strong>Republican elephant</strong></figcaption>
         </figure>
       </section>
-      <section class="section-heading"><div><span class="micro">BRAGGING RIGHTS DEPARTMENT</span><h3>Prediction showdown</h3></div><span class="section-decoration">✳</span></section>
-      <div class="player-grid" id="playerGrid"></div>
+      <section id="playerShowdown">
+        <div class="section-heading"><div><span class="micro">BRAGGING RIGHTS DEPARTMENT</span><h3>Prediction showdown</h3></div><span class="section-decoration">✳</span></div>
+        <div class="player-grid" id="playerGrid"></div>
+      </section>
+      <section id="leaderboardSection" class="leaderboard-section" hidden>
+        <div class="section-heading"><div><span class="micro">THE COMMUNITY CHALLENGE</span><h3>🏆 Prediction leaderboard</h3></div><span class="count-bubble" id="leaderboardCount">0 players</span></div>
+        <p id="leaderboardIntro" class="fine-print">Community leaderboard appears when your challenge is connected.</p>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+      </section>
+      <section class="ballot-progress" aria-label="Your tracked race completion">
+        <div class="progress-heading"><div><span class="micro">YOUR ELECTION NIGHT CHECKLIST</span><h3>Finish your ballot ✍️</h3></div><strong id="progressCount">0 of 88 races picked</strong></div>
+        <div class="completion-meter" role="progressbar" aria-label="Tracked races predicted"><div id="progressFill"></div></div>
+        <div class="progress-footer"><span id="unfinishedCount">88 left to predict</span><button id="nextUnpickedButton" type="button" class="button primary">Show my unfinished races</button></div>
+        <p class="fine-print">Progress counts the 88 featured and tracked races in this app, not all 435 House districts nationwide.</p>
+      </section>
       <section class="section-heading race-section"><div><span class="micro">THE RACE BOARD</span><h3>Watch the map change</h3></div><span id="raceCount" class="count-bubble">88 races</span></section>
-      <div class="race-controls"><div class="tabs" role="tablist" aria-label="Race filters"><button class="tab selected" data-view="featured" type="button">★ Featured</button><button class="tab" data-view="senate" type="button">Senate</button><button class="tab" data-view="house" type="button">House</button><button class="tab" data-view="all" type="button">All tracked</button></div><div class="filter-row"><label class="search-label"><span aria-hidden="true">⌕</span><input id="raceSearch" type="search" placeholder="Search state or district…" aria-label="Search races"></label><select id="raceFilter" aria-label="Filter by race status"><option value="all">Any status</option><option value="open">Not called</option><option value="called">Called</option><option value="unpicked">My unpicked races</option></select></div></div>
-      <div class="board-meta"><span><span class="dot blue-dot"></span> D pick / call</span><span><span class="dot red-dot"></span> R pick / call</span><span><span class="dot gold-dot"></span> Other / independent</span><span>Results are entered by you, not automatically verified</span></div>
+      <div class="race-controls"><div class="tabs" role="tablist" aria-label="Race filters"><button class="tab selected" data-view="featured" type="button">★ Featured</button><button class="tab" data-view="senate" type="button">Senate</button><button class="tab" data-view="house" type="button">House</button><button class="tab" data-view="all" type="button">All tracked</button></div><div class="filter-row"><label class="search-label"><span aria-hidden="true">⌕</span><input id="raceSearch" type="search" placeholder="Search a candidate or district…" aria-label="Search races or candidates"></label><select id="stateFilter" aria-label="Filter by state"><option value="all">All states</option><option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option><option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option><option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option></select><select id="raceFilter" aria-label="Filter by race status"><option value="all">Any status</option><option value="open">Not called</option><option value="called">Called</option><option value="unpicked">My unfinished picks</option></select></div></div>
+      <div class="board-meta"><span><span class="dot blue-dot"></span> D pick / call</span><span><span class="dot red-dot"></span> R pick / call</span><span><span class="dot gold-dot"></span> Other / independent</span><span>Results are entered by players, not automatically verified</span></div>
       <div id="raceGrid" class="race-grid"></div>
       <footer><span>✦ THE BALLOT BOARD '26 ✦</span><p>A tiny election-night tradition, with an unreasonable amount of personality.</p><p>Race lists: <a href="https://ballotpedia.org/U.S._Senate_battlegrounds,_2026" target="_blank" rel="noopener">Ballotpedia</a> and <a href="https://www.cookpolitical.com/ratings/house-race-ratings" target="_blank" rel="noopener">Cook Political Report</a>. Ratings are third-party classifications, not this app's predictions. Nothing here is an official results feed.</p></footer>
     </main>
