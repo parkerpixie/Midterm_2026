@@ -394,3 +394,9 @@ button,select{touch-action:manipulation}
   .sync-alert-body p{font-size:11px}
   .sync-alert .button{font-size:11px;padding:9px;white-space:normal;min-height:44px}
 }
+
+
+/* Show authentication errors inside the open phone-sync dialog (above the modal backdrop). */
+.guest-connect-message{margin:13px 0 12px;padding:14px;background:#eaf5f0;border:1.5px solid #b5d4bf;border-radius:12px;font-size:13px;line-height:1.55;color:#235a47;overflow-wrap:anywhere}
+.guest-connect-message.error{background:#fff0e7;border-color:#e9ada1;color:#7b3433;font-weight:650}
+.guest-connect-message[hidden]{display:none!important}
