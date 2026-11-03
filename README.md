@@ -28,6 +28,29 @@ The homepage and party imagery now use Parker's supplied artwork. The HTML/CSS l
 
 See [assets/README.md](assets/README.md) for file names and details.
 
+## Joining and finding the leaderboard (community edition)
+
+The site now has **Join / Profile** and **🏆 Leaderboard** buttons right in the header, plus a visible three-step explainer below the main banner.
+
+**Before others can create profiles:** connect a dedicated Supabase project, run the latest `schema.sql`, and fill in the two **public** connection settings in `config.js` (see below). The existing Netlify site is **preview-only** until this is done.
+
+**As the host:**
+1. Open the deployed website and choose **Join / Profile**.
+2. Sign in via email link, or choose the optional guest account (you must enable anonymous sign-ins in Supabase; guest profiles cannot be recovered after browser data is cleared).
+3. Give yourself a display name. Select **Community Challenge**, then **Create challenge**.
+4. Choose **Join / Profile** again, and **Copy invitation link**. Paste **that link**, not just the generic homepage URL, into Facebook.
+
+**For friends:**
+1. Open your invitation link, tap **Join / Profile**, and sign in with email or as a guest.
+2. Enter a display name and tap **Join challenge**. Each person edits only their own candidate picks.
+3. Use **🏆 Leaderboard** in the header to see ranked points and completion progress.
+
+The **leaderboard is available for active Community Challenges**. If you're currently in a two-person private board, **Join / Profile → Create or join another challenge** to switch or create a community board. Called results may only be entered by that challenge's host. Predictions lock after each race is called.
+
+**Incumbent labels:** each of the 88 race cards now displays who holds the seat and, where recorded, whether that official is not seeking reelection. Current-membership sources: [U.S. Senate](https://www.senate.gov/senators/) and [U.S. House](https://www.house.gov/representatives). For redrawn districts and vacancies, some seats display "not listed" or "vacant"; those labels deliberately avoid guessing.
+
+**Art update:** the donkey and elephant image containers use `object-fit: contain` so their faces and full designs are visible instead of cropped.
+
 ## Open it tonight, fast
 
 ### 1. Deploy the GitHub repository to Netlify
