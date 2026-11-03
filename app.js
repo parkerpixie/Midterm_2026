@@ -1,6 +1,6 @@
 /* The Ballot Board 2026
-   Local preview works without a server. Cloud mode uses Supabase Auth, Postgres RLS,
-   and realtime changes to sync each signed-in player's picks and shared results.
+   Preserves each phone's local preview in its original storage key.
+   Optional private Supabase duo mode uses anonymous account sessions and RLS for live sync.
    The app never claims a result unless one of the players enters it. */
 const RACES = window.MIDTERM_RACES || [];
 const CANDIDATES = window.MIDTERM_CANDIDATES || {};
@@ -9,6 +9,7 @@ const RACE_IDS = new Set(RACES.map(function (r) { return r.id; }));
 const PREVIEW_KEY = "ballot_board_2026_preview_v1";
 const ACTIVE_ROOM_KEY = "ballot_board_2026_active_room";
 const PARTY = { D:"D", R:"R", O:"Other" };
+const POLLS = window.MIDTERM_POLLS || {closeMinutes:function(){return 21*60;},label:function(){return "9:00 PM ET";}};
 const el = function (id) { return document.getElementById(id); };
 let cachedPreview;
 try { cachedPreview = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch (_) { cachedPreview = null; }
@@ -16,7 +17,7 @@ const state = {
   demo:true, client:null, session:null, room:null, roomList:[], member:null, members:[],
   preferredRoomId:null, pendingInvite:"", creatingNewRoom:false,
   picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
-  persona:"Parker", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
+  persona:"Parker", managerFilter:"open", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
 function escapeHtml(value) {
@@ -89,19 +90,17 @@ function render() {
   const online = !state.demo && !!state.room && !!state.member;
   const status = el("connectionStatus");
   status.className = "status-pill" + (online ? " live" : "");
-  status.textContent = state.demo ? "◌ Local preview only" : online ? "● Shared board synced" : state.session ? "◌ Choose a board" : "◌ Sign in to sync";
+  status.textContent = state.demo ? "◌ Saved on this phone" : online ? "● Both phones synced" : state.session ? "◌ Connect our phones" : "◌ Saved on this phone";
   const notice = el("notice");
   if (state.demo) {
     notice.className = "notice visible";
-    notice.textContent = "🎨 PREVIEW MODE: Picks and results save on this browser only. They will NOT appear on Blake's phone until Supabase is connected.";
+    notice.textContent = "💾 Your original picks are still saved on this phone. Connect the phones only when you're ready, then import your picks into the shared board.";
   } else if (state.pendingInvite) {
     notice.className = "notice visible";
-    notice.textContent = "✉️ You have a challenge invitation waiting. Open Players to join with your own profile.";
+    notice.textContent = "📱 You have Parker or Blake's invite code ready. Open Our phones to join the pair.";
   } else if (!online) {
     notice.className = "notice visible";
-    notice.textContent = state.session
-      ? "👥 You're signed in. Create your shared board or join one using a code in Players."
-      : "🔐 Sign in from Players to save picks online and sync across both phones.";
+    notice.textContent = "💾 Your old phone-only picks are untouched. Create or join the private board to sync.";
   } else {
     notice.className = "notice";
     notice.textContent = "";
@@ -113,31 +112,26 @@ function render() {
   renderLeaderboard();
   renderProgress();
   renderRaces();
+  renderManager();
 }
 
 function renderGuide() {
   const text=el("communityGuideIntro");
   if (!text) return;
+  const p=state.preview.picks||[];
   if (state.demo) {
-    text.textContent="You can explore the game now. To let Facebook friends create their own profiles and appear on a shared leaderboard, connect Supabase first. Preview picks only stay on your device.";
+    const yours=p.filter(function(r){return r.user_id===state.persona;}).length;
+    text.textContent="Your original phone-only predictions are safe ("+yours+" saved for "+state.persona+"). You can keep playing here or connect the two phones without erasing this copy.";
   } else if (state.pendingInvite) {
-    text.textContent="You're invited! Open Join / Profile, sign in with email or as a guest, enter your nickname, and join the challenge.";
-  } else if (!state.session || !state.room) {
-    text.textContent="Tap Join / Profile to sign in (or play as a guest), create a display name, and join a shared challenge using its invitation link.";
-  } else if (state.room.mode==="community") {
-    text.textContent="You're in a Community Challenge! Share the invitation link from Join / Profile. Every friend creates their own nickname and can see the leaderboard below.";
+    text.textContent="An invitation is ready. Join the same private board as Parker or Blake, then use Import saved picks in Our phones to bring over your existing predictions.";
+  } else if (!state.room) {
+    text.textContent="Your phone is connected securely. Open Our phones, create or join the private two-person board, then import your original saved picks.";
   } else {
-    text.textContent="You're in a private two-player game. Want a Facebook leaderboard as well? Open Join / Profile to create another board as a Community Challenge.";
+    text.textContent="Parker and Blake share this board and the same called winners. Your predictions belong to your own profile. You can still export the original phone-only backup at any time.";
   }
 }
 function openLeaderboard() {
-  const section=el("leaderboardSection");
-  if (!section.hidden) {
-    section.scrollIntoView({behavior:"smooth",block:"start"});
-    return;
-  }
-  openAccount();
-  notify("Create or join a Community Challenge to see the shared leaderboard.");
+  el("leaderboardSection").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function incumbentMarkup(race) {
   const inc=INCUMBENTS[race.id];
@@ -215,13 +209,12 @@ function renderPlayers() {
   }).join("");
 }
 function renderLeaderboard() {
-  const isCommunity=!state.demo && state.room && state.room.mode==="community";
+  const isCommunity=false;
   const section=el("leaderboardSection");
-  section.hidden=!isCommunity && !state.demo;
-  if (section.hidden) return;
+  section.hidden=false;
   el("leaderboardIntro").textContent=state.demo
-    ? "This is a two-player preview. Connect Supabase and create a Community Challenge for your Facebook friends to join."
-    : "Players earn one point per correctly predicted candidate after the host enters a race call. Ties stay tied.";
+    ? "Scores on this phone only. Connect Parker and Blake’s phones to see both scores live."
+    : "Both phones see the same score. You earn one point for each correctly predicted candidate after a winner is called.";
   const entries=(isCommunity?state.leaderboard.map(function (p) {
     const correct=Number(p.correct)||0,picked=Number(p.picked)||0,judged=Number(p.judged)||0;
     return {user_id:p.user_id,display_name:p.display_name,
@@ -267,6 +260,7 @@ function filteredRaces() {
     if (state.view==="senate" && race.chamber!=="senate") return false;
     if (state.view==="house" && race.chamber!=="house") return false;
     if (state.view==="governor" && race.chamber!=="governor") return false;
+    if (state.view==="manager") return false;
     if (state.stateCode!=="all" && race.state!==state.stateCode) return false;
     if (state.filter==="open" && calledParty(race.id)) return false;
     if (state.filter==="called" && !calledParty(race.id)) return false;
@@ -339,12 +333,61 @@ function renderRaces() {
   });
   el("stateFilter").value=state.stateCode;
   el("raceFilter").value=state.filter;
+  const managing=state.view==="manager";
+  el("managerPanel").hidden=!managing;
+  el("raceGrid").hidden=managing;
+  document.querySelector(".race-controls").hidden=managing;
   const races=filteredRaces();
-  el("raceCount").textContent=races.length+" of "+RACES.length+" tracked races";
+  el("raceCount").textContent=managing?"CALL DESK":races.length+" of "+RACES.length+" tracked races";
   el("raceGrid").innerHTML=races.length?races.map(raceCard).join(""):
     '<div class="empty-state"><span class="big">🔎</span><strong>No races match those filters</strong><p>Try another state, status, or category.</p></div>';
 }
 
+
+function renderManager() {
+  const panel=el("managerPanel");
+  if(!panel || state.view!=="manager") return;
+  const called=RACES.filter(function(r){return !!calledParty(r.id);}).length;
+  el("managerCount").textContent=called+" of "+RACES.length+" called";
+  el("managerFilter").value=state.managerFilter;
+  const visible=RACES.filter(function(r){
+    return state.managerFilter==="all" ||
+      (state.managerFilter==="called"?!!calledParty(r.id):!calledParty(r.id));
+  }).sort(function(a,b){
+    return POLLS.closeMinutes(a)-POLLS.closeMinutes(b) ||
+      a.state.localeCompare(b.state) ||
+      a.title.localeCompare(b.title);
+  });
+  if(!visible.length){
+    el("managerList").innerHTML='<div class="empty-state"><strong>All caught up! 🎉</strong><p>Switch the filter to view called races.</p></div>';
+    return;
+  }
+  let wave=-1,html="";
+  for(const race of visible){
+    const closing=POLLS.closeMinutes(race);
+    if(closing!==wave){
+      wave=closing;
+      html+='<div class="manager-wave"><span aria-hidden="true">🕒</span><h4>'+escapeHtml(POLLS.label(closing))+'</h4><span>Scheduled final poll close</span></div>';
+    }
+    const result=calledParty(race.id);
+    const choices=candidatesFor(race.id);
+    const can=canManageResults();
+    const type=race.chamber==="senate"?"Senate":race.chamber==="governor"?"Governor":"House";
+    html+='<article class="manager-race'+(result?' manager-called':'')+'">'+
+       '<div class="manager-race-title"><strong>'+escapeHtml(race.title)+'</strong>'+
+       '<small>'+escapeHtml(type+' · '+race.state)+'</small>'+
+       (result?'<span class="manager-done">✓ '+escapeHtml(displayChoice(race.id,result))+'</span>':'<span class="manager-await">Awaiting call</span>')+'</div>'+
+       '<div class="manager-candidates">'+choices.map(function(c){
+         return '<button type="button" class="manager-choice'+(c.id===result?' current':'')+
+          '" data-action="manager-call" data-race="'+escapeHtml(race.id)+'" data-candidate="'+escapeHtml(c.id)+'"'+(!can?' disabled':'')+
+          ' aria-pressed="'+(c.id===result?'true':'false')+'"><span class="party-tick '+(c.party==="D"?"dem":c.party==="R"?"rep":"other")+'"></span>'+
+          escapeHtml(c.name)+(result===c.id?' ✓':'')+'</button>';
+       }).join("")+
+       (result?'<button type="button" class="manager-clear" data-action="manager-clear" data-race="'+escapeHtml(race.id)+'"'+(!can?' disabled':'')+'>Undo call</button>':'')+
+       '</div></article>';
+  }
+  el("managerList").innerHTML=html;
+}
 
 async function savePick(raceId,candidateId) {
   if (!RACE_IDS.has(raceId)) return;
