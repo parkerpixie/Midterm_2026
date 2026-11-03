@@ -17,6 +17,17 @@ A phone-friendly, retro-styled Parker-vs.-Blake 2026 midterm election game. Runs
 - Search, chamber filters, called/open/unpicked filters, animated design, and responsive phone layout.
 - **No automatic results API.** Manual results are not independently verified by the app.
 
+## ✿ Custom folk-art illustrations
+
+The homepage and party imagery now use Parker's supplied artwork. The HTML/CSS layout is committed, but GitHub's text-only editor connection cannot attach the binary WebP files itself. To finish the images:
+
+1. Download **ballot-board-art-assets.zip** from the ChatGPT response and unzip it.
+2. Open the GitHub [assets directory](https://github.com/parkerpixie/Midterm_2026/tree/main/assets).
+3. Select **Add file → Upload files**. Upload the **three WebP files** from the extracted assets folder, then **Commit changes**.
+4. If Netlify is connected to GitHub, the images appear after the next deployment.
+
+See [assets/README.md](assets/README.md) for file names and details.
+
 ## Open it tonight, fast
 
 ### 1. Deploy the GitHub repository to Netlify
