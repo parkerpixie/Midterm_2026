@@ -17,7 +17,7 @@ const state = {
   demo:true, client:null, session:null, room:null, roomList:[], member:null, members:[],
   preferredRoomId:null, pendingInvite:"", creatingNewRoom:false,
   picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
-  persona:"Parker", managerFilter:"open", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
+  persona:"Parker", managerFilter:"open", syncError:"", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
 function escapeHtml(value) {
@@ -90,7 +90,9 @@ function render() {
   const online = !state.demo && !!state.room && !!state.member;
   const status = el("connectionStatus");
   status.className = "status-pill" + (online ? " live" : "");
-  status.textContent = state.demo ? "◌ Saved on this phone" : online ? "● Both phones synced" : state.session ? "◌ Connect our phones" : "◌ Saved on this phone";
+  status.textContent = state.demo ? "◌ Picks on this phone" :
+    online ? "● "+state.members.length+"/2 phones linked" :
+    state.session ? "◌ Connect private board" : "◌ Picks on this phone";
   const notice = el("notice");
   if (state.demo) {
     notice.className = "notice visible";
@@ -106,6 +108,7 @@ function render() {
     notice.textContent = "";
   }
   renderGuide();
+  renderSyncAlert();
   renderChambers();
   renderGovernors();
   renderPlayers();
@@ -113,6 +116,67 @@ function render() {
   renderProgress();
   renderRaces();
   renderManager();
+}
+
+function renderSyncAlert() {
+  const alert=el("syncAlert");
+  if(!alert)return;
+  alert.className="sync-alert";
+  const title=el("syncAlertTitle"),copy=el("syncAlertText"),button=el("syncAlertAction");
+  const localPicks=(state.preview.picks||[]);
+  const counted=function(name){
+    return localPicks.filter(function(p){
+      return String(p.user_id||"").toLowerCase()===String(name||"").toLowerCase();
+    }).length;
+  };
+  if(state.demo){
+    const n=counted(state.persona);
+    title.textContent=n+" predictions saved ONLY on this phone";
+    copy.textContent="Blake cannot see these yet. Back them up under Sync, then connect both phones to the same private board. Your picks remain untouched.";
+    button.textContent="Connect phones";
+    if(state.syncError){
+      title.textContent="Phone sync not connected";
+      copy.textContent=state.syncError+" Your "+n+" saved phone predictions are still safe.";
+    }
+    return;
+  }
+  if(!state.room||!state.member){
+    title.textContent="Your phone is signed in but NOT sharing picks";
+    copy.textContent="Open Sync and create or join the same private game. Any original phone picks remain saved separately.";
+    button.textContent="Set up board";
+    return;
+  }
+  const members=state.members||[];
+  const mine=state.member.display_name;
+  const myLocal=counted(mine);
+  const myCloud=state.picks.filter(function(p){return p.user_id===currentId();}).length;
+  const names=members.map(function(m){return m.display_name+" "+state.picks.filter(function(p){return p.user_id===m.user_id;}).length+" online";});
+  if(myLocal>myCloud){
+    alert.classList.add("needs-import");
+    title.textContent=(myLocal-myCloud)+" of your phone's saved picks may still need importing";
+    copy.textContent="Tap Import my picks to add missing predictions without overwriting existing online ones. Currently online: "+names.join(" • ")+".";
+    button.textContent="Import my picks";
+    return;
+  }
+  if(members.length<2){
+    title.textContent="Your private game is connected, but Blake/Parker is not";
+    copy.textContent="Only "+members.length+" of 2 players joined. Send the invite code from Sync to the other phone and import that phone's picks.";
+    button.textContent="Invite second phone";
+    return;
+  }
+  const partner=members.find(function(m){return m.user_id!==currentId();});
+  const partnerCloud=partner?state.picks.filter(function(p){return p.user_id===partner.user_id;}).length:0;
+  if(partnerCloud===0){
+    alert.classList.add("needs-import");
+    title.textContent="Both phones joined, but your partner has 0 shared picks";
+    copy.textContent=names.join(" • ")+". The other phone must open Sync and import its saved predictions.";
+    button.textContent="Sync instructions";
+    return;
+  }
+  alert.classList.add("connected");
+  title.textContent="Two phones connected, both sets of picks visible";
+  copy.textContent=names.join(" • ")+". Winner calls and scores are shared.";
+  button.textContent="See both scores";
 }
 
 function renderGuide() {
@@ -653,10 +717,15 @@ async function signInGuest() {
     }
     state.session=data.session;
     state.demo=false;
+    state.syncError="";
     await bootUser();
     renderAccount();
     notify("Guest profile ready! Add your nickname to join.");
-  } catch (error) { fail(error); }
+  } catch (error) {
+    state.syncError=error.message||"Cannot connect to private board.";
+    renderSyncAlert();
+    fail(error);
+  }
 }
 function clearInviteFromAddress() {
   // Once a member switches boards, don't force the old invite on reload.
@@ -834,6 +903,17 @@ function switchView(view) {
 }
 function bindEvents() {
   el("accountButton").addEventListener("click",openAccount);
+  el("syncAlertAction").addEventListener("click",function(){
+    if(!state.demo&&state.room&&state.member){
+      const local=(state.preview.picks||[]).filter(function(p){
+        return String(p.user_id||"").toLowerCase()===String(state.member.display_name||"").toLowerCase();
+      }).length;
+      const cloud=state.picks.filter(function(p){return p.user_id===currentId();}).length;
+      if(local>cloud)return importLocalPicks();
+      if(state.members.length===2&&state.picks.some(function(p){return p.user_id!==currentId();}))return openLeaderboard();
+    }
+    openAccount();
+  });
   el("communityStartButton").addEventListener("click",openAccount);
   el("leaderboardButton").addEventListener("click",openLeaderboard);
   el("communityLeaderboardButton").addEventListener("click",openLeaderboard);
