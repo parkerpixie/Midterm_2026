@@ -211,6 +211,33 @@ grant select, insert, update, delete on public.midterm_picks to authenticated;
 grant select, insert, update, delete on public.midterm_results to authenticated;
 grant select, insert, update on public.midterm_totals to authenticated;
 
+
+-- Aggregate public challenge scores on the server, instead of downloading
+-- up to 500 x 88 players' private picks to every browser. Runs with invoker
+-- privileges and RLS, and explicitly checks membership in the requested room.
+create or replace function public.midterm_leaderboard(p_room uuid)
+returns table(user_id uuid,display_name text,picked bigint,judged bigint,correct bigint)
+language sql stable security invoker
+set search_path = ''
+as $
+  select m.user_id,m.display_name,
+    count(p.candidate_id) filter (where p.candidate_id is not null) as picked,
+    count(p.candidate_id) filter
+      (where p.candidate_id is not null and r.candidate_id is not null) as judged,
+    count(p.candidate_id) filter
+      (where p.candidate_id is not null and r.candidate_id=p.candidate_id) as correct
+  from public.midterm_members m
+  left join public.midterm_picks p
+    on p.room_id=m.room_id and p.user_id=m.user_id
+  left join public.midterm_results r
+    on r.room_id=p.room_id and r.race_id=p.race_id
+  where m.room_id=p_room and private.midterm_is_member(p_room)
+  group by m.user_id,m.display_name
+  order by correct desc,picked desc,m.display_name asc;
+$;
+revoke all on function public.midterm_leaderboard(uuid) from public,anon;
+grant execute on function public.midterm_leaderboard(uuid) to authenticated;
+
 -- Enable Postgres change notifications for the four shared collections.
 do $$
 declare tbl text;
