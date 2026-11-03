@@ -15,7 +15,7 @@
     WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"
   };
   const senateAbbr = "AL AK AR CO DE FL GA ID IL IA KS KY LA ME MA MI MN MS MT NE NH NJ NM NC OH OK OR RI SC SD TN TX VA WV WY".split(" ");
-  const senateBattlegrounds = new Set("AK FL GA IA KS ME MI MT NE NH NC OH TX".split(" "));
+  const senateBattlegrounds = new Set("AK FL GA IA ME MI MT NE NH NC OH TX".split(" "));
   const senate = senateAbbr.map(function (abbr) {
     const special = abbr === "FL" || abbr === "OH";
     return {
