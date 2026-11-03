@@ -133,7 +133,9 @@ with check (user_id=(select auth.uid()) and private.midterm_is_member(room_id) a
   not exists (select 1 from public.midterm_results r where r.room_id=midterm_picks.room_id and r.race_id=midterm_picks.race_id));
 drop policy if exists midterm_picks_delete on public.midterm_picks;
 create policy midterm_picks_delete on public.midterm_picks for delete to authenticated
-using (user_id=(select auth.uid()) and private.midterm_is_member(room_id));
+using (user_id=(select auth.uid()) and private.midterm_is_member(room_id) and
+  not exists (select 1 from public.midterm_results r
+              where r.room_id=midterm_picks.room_id and r.race_id=midterm_picks.race_id));
 
 drop policy if exists midterm_results_read on public.midterm_results;
 create policy midterm_results_read on public.midterm_results for select to authenticated
