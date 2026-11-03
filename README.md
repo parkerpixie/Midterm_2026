@@ -1,5 +1,22 @@
 # ✦ The Ballot Board '26
 
+## November 3: private Parker & Blake mode
+
+The app is now **a private two-person prediction board**. **Google/email sign-in controls and public community sign-up have been removed from the website.** Older how-to notes below are historical and are not needed for the current release.
+
+### Safe handoff of phone-only predictions
+
+- Open **the same browser on each phone where picks were originally saved** at [votemidterms2026.netlify.app](https://votemidterms2026.netlify.app). Safari, Chrome and an added Home Screen app can use different storage even on the same device.
+- Tap **Our phones** → **Download a backup of this phone**. A backup includes original local predictions, locally entered winner calls and manually entered chamber totals. The app never deletes the original local save.
+- To activate the live private board, Supabase must have **Anonymous Sign-Ins** enabled under **Authentication → Providers**. Each phone taps **Connect without Google or email**. This creates an anonymous device session, not a reusable email/password account.
+- One person chooses their real profile name and **Create our two-person board**. Share the private invitation link/code with the second phone. The second person signs in anonymously (same one-button flow) and **joins** the existing board under their own name. A private board permits only 2 distinct participants.
+- **Each phone** opens **Our phones → Import [name]’s saved picks**. The import is additive: skips existing online picks and called races, never erases original localStorage. Old party-only picks are preserved as party picks but may need a candidate selected to score.
+- Wait until **both people finish importing picks** before entering or transferring any race calls. Once a call is recorded, that race's predictions lock to preserve fairness.
+- The **Manager** tab groups the 124 tracked Senate, House and Governors races by scheduled **final poll-closing time (Central Standard Time)**, using [270toWin's 2026 timetable](https://www.270towin.com/poll-closing-times/). Mixed-timezone congressional districts have district-specific exceptions.
+- If the anonymous session or browser storage is cleared, that device's account cannot be recovered automatically. Keep the original phone backups and avoid signing out or clearing browsing data. No Google auth required.
+
+
+
 ## Governors + Google privacy verification (November 3 update)
 
 **36 gubernatorial elections** now appear in the **Governors** tab, including all nine [Ballotpedia battlegrounds](https://ballotpedia.org/Gubernatorial_battlegrounds,_2026) (AK, AZ, GA, IA, KS, MI, NV, OH, WI). Candidates and current incumbent governors are loaded from `governors.js`. Alaska includes all four round-one choices listed by Ballotpedia. This brings the board to **124 tracked races**. All existing scoring, state filters and completion tracking now include governors.
