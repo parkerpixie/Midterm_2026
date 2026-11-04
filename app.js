@@ -17,7 +17,7 @@ const state = {
   demo:true, client:null, session:null, room:null, roomList:[], member:null, members:[],
   preferredRoomId:null, pendingInvite:"", creatingNewRoom:false,
   picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"all", filter:"all", stateCode:"all", search:"",
-  persona:"Parker", managerFilter:"open", syncError:"", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
+  persona:"Parker", managerFilter:"open", managerChamber:"all", syncError:"", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
 function escapeHtml(value) {
@@ -412,10 +412,16 @@ function renderRaces() {
 function renderManager() {
   const panel=el("managerPanel");
   if(!panel || state.view!=="manager") return;
-  const called=RACES.filter(function(r){return !!calledParty(r.id);}).length;
-  el("managerCount").textContent=called+" of "+RACES.length+" called";
+  const matchingChamber=RACES.filter(function(r){
+    return state.managerChamber==="all" || r.chamber===state.managerChamber;
+  });
+  const called=matchingChamber.filter(function(r){return !!calledParty(r.id);}).length;
+  const chamberLabel=state.managerChamber==="all"?"races":
+    state.managerChamber==="governor"?"governor races":state.managerChamber+" races";
+  el("managerCount").textContent=called+" of "+matchingChamber.length+" "+chamberLabel+" called";
   el("managerFilter").value=state.managerFilter;
-  const visible=RACES.filter(function(r){
+  el("managerChamberFilter").value=state.managerChamber;
+  const visible=matchingChamber.filter(function(r){
     return state.managerFilter==="all" ||
       (state.managerFilter==="called"?!!calledParty(r.id):!calledParty(r.id));
   }).sort(function(a,b){
@@ -424,7 +430,8 @@ function renderManager() {
       a.title.localeCompare(b.title);
   });
   if(!visible.length){
-    el("managerList").innerHTML='<div class="empty-state"><strong>All caught up! 🎉</strong><p>Switch the filter to view called races.</p></div>';
+    const message=state.managerFilter==="open"?"No uncalled races in this selection.":"No races match these filters.";
+    el("managerList").innerHTML='<div class="empty-state"><strong>'+message+'</strong><p>Try All statuses or a different chamber.</p></div>';
     return;
   }
   let wave=-1,html="";
@@ -969,6 +976,11 @@ function bindEvents() {
   });
   el("managerFilter").addEventListener("change",function(event){
     state.managerFilter=event.target.value;renderManager();
+  });
+  el("managerChamberFilter").addEventListener("change",function(event){
+    const next=event.target.value;
+    state.managerChamber=["all","senate","house","governor"].includes(next)?next:"all";
+    renderManager();
   });
   el("nextUnpickedButton").addEventListener("click",function () {
     state.view="all"; state.filter="unpicked"; state.stateCode="all";
