@@ -400,3 +400,10 @@ button,select{touch-action:manipulation}
 .guest-connect-message{margin:13px 0 12px;padding:14px;background:#eaf5f0;border:1.5px solid #b5d4bf;border-radius:12px;font-size:13px;line-height:1.55;color:#235a47;overflow-wrap:anywhere}
 .guest-connect-message.error{background:#fff0e7;border-color:#e9ada1;color:#7b3433;font-weight:650}
 .guest-connect-message[hidden]{display:none!important}
+
+/* Make all race categories discoverable on phones, no hidden horizontal swipe. */
+@media(max-width:730px){
+  .race-controls .tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible!important;flex-wrap:wrap!important;padding:6px}
+  .race-controls .tab{min-width:0!important;width:100%;min-height:44px;padding:10px 4px;font-size:11px;white-space:normal!important;line-height:1.25;text-align:center}
+  .race-controls .tab[data-view="all"]{font-weight:900}
+}
