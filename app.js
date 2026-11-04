@@ -16,7 +16,7 @@ try { cachedPreview = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); }
 const state = {
   demo:true, client:null, session:null, room:null, roomList:[], member:null, members:[],
   preferredRoomId:null, pendingInvite:"", creatingNewRoom:false,
-  picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"featured", filter:"all", stateCode:"all", search:"",
+  picks:[], results:[], totals:[], leaderboard:[], channel:null, view:"all", filter:"all", stateCode:"all", search:"",
   persona:"Parker", managerFilter:"open", syncError:"", preview:cachedPreview || {picks:[],results:[],totals:[],persona:"Parker"}
 };
 if (state.preview.persona === "Blake") state.persona = "Blake";
@@ -985,7 +985,11 @@ function bindEvents() {
     if (!target) return;
     if (target.dataset.view) {switchView(target.dataset.view);return;}
     const action=target.dataset.action,raceId=target.dataset.race;
-    if(action==="mobile-picks"){switchView("featured");return;}
+    if(action==="mobile-picks"){
+      state.filter="all"; state.stateCode="all"; state.search="";
+      el("raceSearch").value="";
+      switchView("all");return;
+    }
     if(action==="mobile-scores"){openLeaderboard();return;}
     if(action==="mobile-manager"){switchView("manager");return;}
     if(action==="mobile-sync"){openAccount();return;}
