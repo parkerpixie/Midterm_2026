@@ -7,14 +7,14 @@
   <meta name="description" content="The Ballot Board: Parker and Blake’s private election-night prediction board, synced picks and a poll-close manager.">
   <title>The Ballot Board '26 | Parker vs Blake</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=all-races4">
+  <link rel="stylesheet" href="styles.css?v=manager-chambers-20261103">
   <script src="config.js" defer></script>
   <script src="races.js" defer></script>
   <script src="candidates.js" defer></script>
   <script src="incumbents.js" defer></script>
   <script src="governors.js" defer></script>
   <script src="poll-times.js" defer></script>
-  <script type="module" src="app.js?v=all-races4"></script>
+  <script type="module" src="app.js?v=manager-chambers-20261103"></script>
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -119,8 +119,9 @@
         <div class="manager-head"><span class="micro">ELECTION-NIGHT CONTROL DESK</span><h3>📋 Call the races</h3>
           <p>Ordered by when the <strong>last polls close</strong>, shown in Central Standard Time. Pick the winner when the race is reliably called; polling close does not mean a winner has been declared. Both Parker and Blake can enter calls on a private shared board.</p>
           <p class="fine-print">Source: <a href="https://www.270towin.com/poll-closing-times/" target="_blank" rel="noopener">270toWin 2026 poll closing times</a>. Districts crossing time zones are ordered by their final closing time.</p>
-          <div class="manager-tools"><label>Show <select id="managerFilter" aria-label="Manager race status"><option value="open">⏳ Uncalled races</option><option value="all">All races</option><option value="called">✓ Called races</option></select></label>
-          <span class="count-bubble" id="managerCount">0 of 124 called</span></div>
+          <div class="manager-tools"><label>Chamber <select id="managerChamberFilter" aria-label="Manager chamber filter"><option value="all">All chambers</option><option value="senate">Senate</option><option value="house">House</option><option value="governor">Governors</option></select></label>
+          <label>Status <select id="managerFilter" aria-label="Manager race status"><option value="open">⏳ Uncalled races</option><option value="all">All races</option><option value="called">✓ Called races</option></select></label>
+          <span class="count-bubble" id="managerCount">0 of 124 races called</span></div>
         </div>
         <div id="managerList" class="manager-list"></div>
       </section>
