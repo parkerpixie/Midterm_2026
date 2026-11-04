@@ -407,3 +407,14 @@ button,select{touch-action:manipulation}
   .race-controls .tab{min-width:0!important;width:100%;min-height:44px;padding:10px 4px;font-size:11px;white-space:normal!important;line-height:1.25;text-align:center}
   .race-controls .tab[data-view="all"]{font-weight:900}
 }
+
+/* Election manager: independent Chamber and Called/Uncalled filters. */
+.manager-tools{justify-content:flex-start;align-items:end}
+.manager-tools label{flex:0 1 210px;min-width:145px}
+.manager-tools .count-bubble{margin-left:auto}
+@media(max-width:730px){
+  .manager-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:end}
+  .manager-tools label{min-width:0;width:100%}
+  .manager-tools select{width:100%;min-width:0;max-width:100%;font-size:13px;padding:10px 8px}
+  .manager-tools .count-bubble{grid-column:1 / -1;justify-self:start;margin-left:0}
+}
